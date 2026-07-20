@@ -1,6 +1,11 @@
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { z } from 'zod';
 import { CONFIG_DIR, PAUSE_CONFIG } from '../lib/paths.js';
+
+function pauseFile(configDir: string): string {
+  return join(configDir, 'pause.json');
+}
 
 export const pauseTestsSchema = z.object({
   duration_minutes: z
@@ -22,10 +27,11 @@ export interface PauseState {
   reason?: string;
 }
 
-export function isTestsPaused(): { paused: boolean; until?: string; reason?: string } {
-  if (!existsSync(PAUSE_CONFIG)) return { paused: false };
+export function isTestsPaused(configDir: string = CONFIG_DIR): { paused: boolean; until?: string; reason?: string } {
+  const file = configDir === CONFIG_DIR ? PAUSE_CONFIG : pauseFile(configDir);
+  if (!existsSync(file)) return { paused: false };
 
-  const state = JSON.parse(readFileSync(PAUSE_CONFIG, 'utf-8')) as PauseState;
+  const state = JSON.parse(readFileSync(file, 'utf-8')) as PauseState;
   const pausedUntil = new Date(state.paused_until);
 
   if (Date.now() >= pausedUntil.getTime()) return { paused: false };

@@ -111,10 +111,10 @@ function collectFailures(suites: PWSuite[], parentFile = ''): TestFailure[] {
   return failures;
 }
 
-export function readLastRun(): RunSummary | null {
-  if (!existsSync(LAST_RUN)) return null;
+export function readLastRun(path: string = LAST_RUN): RunSummary | null {
+  if (!existsSync(path)) return null;
 
-  const raw = readFileSync(LAST_RUN, 'utf-8');
+  const raw = readFileSync(path, 'utf-8');
   const report: PWReport = JSON.parse(raw);
 
   return {

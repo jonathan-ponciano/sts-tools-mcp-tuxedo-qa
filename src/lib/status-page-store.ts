@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { CONFIG_DIR, STATUS_PAGE_CONFIG } from './paths.js';
+import { join } from 'path';
+import { CONFIG_DIR } from './paths.js';
 
 export interface StatusPageConfig {
   enabled: boolean;
@@ -10,12 +11,17 @@ export interface StatusPageConfig {
 
 const DEFAULT: StatusPageConfig = { enabled: false, slug: '', name: '', tests: [] };
 
-export function readStatusPage(): StatusPageConfig {
-  if (!existsSync(STATUS_PAGE_CONFIG)) return { ...DEFAULT };
-  return JSON.parse(readFileSync(STATUS_PAGE_CONFIG, 'utf-8')) as StatusPageConfig;
+function statusPageFile(configDir: string): string {
+  return join(configDir, 'status-page.json');
 }
 
-export function writeStatusPage(config: StatusPageConfig): void {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(STATUS_PAGE_CONFIG, JSON.stringify(config, null, 2), 'utf-8');
+export function readStatusPage(configDir: string = CONFIG_DIR): StatusPageConfig {
+  const file = statusPageFile(configDir);
+  if (!existsSync(file)) return { ...DEFAULT };
+  return JSON.parse(readFileSync(file, 'utf-8')) as StatusPageConfig;
+}
+
+export function writeStatusPage(config: StatusPageConfig, configDir: string = CONFIG_DIR): void {
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(statusPageFile(configDir), JSON.stringify(config, null, 2), 'utf-8');
 }

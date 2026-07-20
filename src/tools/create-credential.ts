@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { upsertCredential } from '../lib/credentials-store.js';
+import { configDirFor, CURRENT_PROJECT } from '../lib/paths.js';
 
 export const createCredentialSchema = z.object({
   name: z
@@ -12,8 +13,9 @@ export const createCredentialSchema = z.object({
 
 export type CreateCredentialInput = z.infer<typeof createCredentialSchema>;
 
-export function createCredential(input: CreateCredentialInput): string {
-  upsertCredential(input.name, input.fields);
+export function createCredential(input: CreateCredentialInput, project?: string | null): string {
+  const p = project !== undefined ? project : CURRENT_PROJECT;
+  upsertCredential(input.name, input.fields, configDirFor(p));
   const keys = Object.keys(input.fields).join(', ');
   return `Credential "${input.name}" saved with fields: ${keys}`;
 }

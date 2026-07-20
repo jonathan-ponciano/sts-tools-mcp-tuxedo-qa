@@ -2,8 +2,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { CONFIG_DIR } from './paths.js';
 import { join } from 'path';
 
-const META_FILE = join(CONFIG_DIR, 'test-metadata.json');
-
 export interface TestMeta {
   name?: string;
   description?: string;
@@ -18,37 +16,46 @@ export interface TestMeta {
 
 type MetaStore = Record<string, TestMeta>;
 
-function load(): MetaStore {
-  if (!existsSync(META_FILE)) return {};
-  return JSON.parse(readFileSync(META_FILE, 'utf-8')) as MetaStore;
+function metaFile(configDir: string): string {
+  return join(configDir, 'test-metadata.json');
 }
 
-function save(store: MetaStore): void {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(META_FILE, JSON.stringify(store, null, 2), 'utf-8');
+function load(configDir: string): MetaStore {
+  const file = metaFile(configDir);
+  if (!existsSync(file)) return {};
+  return JSON.parse(readFileSync(file, 'utf-8')) as MetaStore;
 }
 
-export function getTestMeta(filename: string): TestMeta | null {
-  const store = load();
+function save(store: MetaStore, configDir: string): void {
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(metaFile(configDir), JSON.stringify(store, null, 2), 'utf-8');
+}
+
+export function getTestMeta(filename: string, configDir: string = CONFIG_DIR): TestMeta | null {
+  const store = load(configDir);
   return store[filename] ?? null;
 }
 
-export function upsertTestMeta(filename: string, updates: Partial<TestMeta>): TestMeta {
-  const store = load();
+export function upsertTestMeta(
+  filename: string,
+  updates: Partial<TestMeta>,
+  configDir: string = CONFIG_DIR,
+): TestMeta {
+  const store = load(configDir);
   const now = new Date().toISOString();
   const existing = store[filename] ?? { enabled: true, created_at: now, updated_at: now };
   const merged = { ...existing, ...updates, updated_at: now };
   store[filename] = merged;
-  save(store);
+  save(store, configDir);
   return merged;
 }
 
-export function deleteTestMeta(filename: string): void {
-  const store = load();
+export function deleteTestMeta(filename: string, configDir: string = CONFIG_DIR): void {
+  const store = load(configDir);
   delete store[filename];
-  save(store);
+  save(store, configDir);
 }
 
-export function getAllMeta(): MetaStore {
-  return load();
+export function getAllMeta(configDir: string = CONFIG_DIR): MetaStore {
+  return load(configDir);
 }

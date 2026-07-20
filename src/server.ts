@@ -16,7 +16,13 @@ import { readCredentials, maskValue } from './lib/credentials-store.js';
 import { readProtection, writeProtection } from './lib/protection-store.js';
 import { readStatusPage, writeStatusPage } from './lib/status-page-store.js';
 import { readHistory, computeUptime } from './lib/run-history.js';
-import { TESTS_DIR } from './lib/paths.js';
+import {
+  listProjectSlugs,
+  hasDefaultProjectData,
+  testsDirFor,
+  configDirFor,
+  lastRunFor,
+} from './lib/paths.js';
 import { startScheduler, getSchedulerState, nextRunAt } from './lib/scheduler.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,26 +39,63 @@ app.use((_req, res, next) => {
 });
 app.options(/\/.*/, (_req, res) => res.sendStatus(204));
 
+// The dashboard manages every project from one process — unlike an MCP
+// connection (always scoped to a single project via its own env var), each
+// request says which project it's about via ?project= (GET) or body.project
+// (POST/PUT/DELETE). Empty/absent means the unnamespaced default project.
+function projectFrom(req: express.Request): string | null {
+  const raw = (req.query.project as string | undefined) ?? (req.body as { project?: string })?.project;
+  return raw && raw.length > 0 ? raw : null;
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
   if (!existsSync(DASHBOARD)) return res.status(404).send('Dashboard not found. Create dashboard/index.html');
   res.sendFile(DASHBOARD);
 });
 
+// ── Projects ──────────────────────────────────────────────────────────────────
+app.get('/api/projects', (_req, res) => {
+  const slugs: (string | null)[] = listProjectSlugs();
+  if (hasDefaultProjectData()) slugs.push(null);
+
+  const scheduler = getSchedulerState();
+
+  const projects = slugs.map((slug) => {
+    const configDir = configDirFor(slug);
+    const testsDir = testsDirFor(slug);
+    const testCount = existsSync(testsDir)
+      ? readdirSync(testsDir).filter((f) => f.endsWith('.spec.ts')).length
+      : 0;
+    const history = readHistory(configDir);
+    return {
+      project: slug,
+      label: slug ?? 'padrão',
+      testCount,
+      uptime: computeUptime(history),
+      running: scheduler.running.filter((r) => r.project === slug).length,
+    };
+  });
+
+  res.json({ projects });
+});
+
 // ── Status ─────────────────────────────────────────────────────────────────────
-app.get('/api/status', (_req, res) => {
-  const lastRun = readLastRun();
+app.get('/api/status', (req, res) => {
+  const lastRun = readLastRun(lastRunFor(projectFrom(req)));
   res.json({ lastRun });
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
-app.get('/api/tests', (_req, res) => {
-  const meta = getAllMeta();
-  const files = existsSync(TESTS_DIR)
-    ? readdirSync(TESTS_DIR).filter((f) => f.endsWith('.spec.ts'))
+app.get('/api/tests', (req, res) => {
+  const project = projectFrom(req);
+  const testsDir = testsDirFor(project);
+  const meta = getAllMeta(configDirFor(project));
+  const files = existsSync(testsDir)
+    ? readdirSync(testsDir).filter((f) => f.endsWith('.spec.ts'))
     : [];
 
-  const lastRun = readLastRun();
+  const lastRun = readLastRun(lastRunFor(project));
   const failedFiles = new Set((lastRun?.failures ?? []).map((f) => basename(f.file)));
 
   const scheduler = getSchedulerState();
@@ -71,7 +114,7 @@ app.get('/api/tests', (_req, res) => {
       status,
       ...m,
       next_run_at: nextRunAt(m as Parameters<typeof nextRunAt>[0]),
-      running: scheduler.running.includes(filename),
+      running: scheduler.running.some((r) => r.project === project && r.file === filename),
     };
   });
 
@@ -84,15 +127,16 @@ app.get('/api/scheduler', (_req, res) => {
 });
 
 app.get('/api/tests/:name', (req, res) => {
+  const project = projectFrom(req);
   const safeName = basename(req.params.name).replace(/\.spec\.ts$/, '');
   const filename = `${safeName}.spec.ts`;
-  const filePath = join(TESTS_DIR, filename);
+  const filePath = join(testsDirFor(project), filename);
 
   if (!existsSync(filePath)) return res.status(404).json({ error: 'Test not found.' });
 
   const code = readFileSync(filePath, 'utf-8');
-  const meta = getTestMeta(filename) ?? { enabled: true };
-  const lastRun = readLastRun();
+  const meta = getTestMeta(filename, configDirFor(project)) ?? { enabled: true };
+  const lastRun = readLastRun(lastRunFor(project));
   const failure = lastRun?.failures.find((f) => basename(f.file) === filename) ?? null;
 
   res.json({ filename, code, meta, failure });
@@ -100,7 +144,7 @@ app.get('/api/tests/:name', (req, res) => {
 
 app.post('/api/tests', async (req, res) => {
   try {
-    const result = await createTest(req.body);
+    const result = await createTest(req.body, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -109,7 +153,7 @@ app.post('/api/tests', async (req, res) => {
 
 app.put('/api/tests/:name', (req, res) => {
   try {
-    const result = updateTest({ name: req.params.name, ...req.body });
+    const result = updateTest({ name: req.params.name, ...req.body }, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -118,7 +162,7 @@ app.put('/api/tests/:name', (req, res) => {
 
 app.delete('/api/tests/:name', async (req, res) => {
   try {
-    const result = await deleteTest({ name: req.params.name, confirm: true });
+    const result = await deleteTest({ name: req.params.name, confirm: true }, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -126,26 +170,28 @@ app.delete('/api/tests/:name', async (req, res) => {
 });
 
 app.post('/api/tests/:name/run', async (req, res) => {
+  const project = projectFrom(req);
   try {
-    const message = await runTests({ test_file: req.params.name, wait_for_result: true });
-    res.json({ message, lastRun: readLastRun() });
+    const message = await runTests({ test_file: req.params.name, wait_for_result: true }, project);
+    res.json({ message, lastRun: readLastRun(lastRunFor(project)) });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
 });
 
-app.post('/api/run-all', async (_req, res) => {
+app.post('/api/run-all', async (req, res) => {
+  const project = projectFrom(req);
   try {
-    const message = await runTests({ wait_for_result: true });
-    res.json({ message, lastRun: readLastRun() });
+    const message = await runTests({ wait_for_result: true }, project);
+    res.json({ message, lastRun: readLastRun(lastRunFor(project)) });
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
 });
 
 // ── Credentials ────────────────────────────────────────────────────────────────
-app.get('/api/credentials', (_req, res) => {
-  const all = readCredentials();
+app.get('/api/credentials', (req, res) => {
+  const all = readCredentials(configDirFor(projectFrom(req)));
   const credentials = Object.entries(all).map(([name, fields]) => ({
     name,
     fields: Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, maskValue(v)])),
@@ -156,7 +202,7 @@ app.get('/api/credentials', (_req, res) => {
 app.post('/api/credentials', async (req, res) => {
   try {
     const { name, fields } = req.body as { name: string; fields: Record<string, string> };
-    const result = await createCredential({ name, fields });
+    const result = await createCredential({ name, fields }, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -165,7 +211,7 @@ app.post('/api/credentials', async (req, res) => {
 
 app.delete('/api/credentials/:name', async (req, res) => {
   try {
-    const result = await deleteCredential({ name: req.params.name });
+    const result = await deleteCredential({ name: req.params.name }, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -173,8 +219,8 @@ app.delete('/api/credentials/:name', async (req, res) => {
 });
 
 // ── Protection ────────────────────────────────────────────────────────────────
-app.get('/api/protection', (_req, res) => {
-  const config = readProtection();
+app.get('/api/protection', (req, res) => {
+  const config = readProtection(configDirFor(projectFrom(req)));
   // mask values for display
   const masked = Object.fromEntries(
     Object.entries(config.extraHeaders).map(([k, v]) => [k, maskValue(v)]),
@@ -185,7 +231,7 @@ app.get('/api/protection', (_req, res) => {
 app.put('/api/protection', (req, res) => {
   try {
     const { extraHeaders } = req.body as { extraHeaders: Record<string, string> };
-    writeProtection({ extraHeaders: extraHeaders ?? {} });
+    writeProtection({ extraHeaders: extraHeaders ?? {} }, configDirFor(projectFrom(req)));
     res.json({ message: 'Protection config saved.' });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -193,13 +239,13 @@ app.put('/api/protection', (req, res) => {
 });
 
 // ── Status page config ────────────────────────────────────────────────────────
-app.get('/api/status-page', (_req, res) => {
-  res.json(readStatusPage());
+app.get('/api/status-page', (req, res) => {
+  res.json(readStatusPage(configDirFor(projectFrom(req))));
 });
 
 app.put('/api/status-page', (req, res) => {
   try {
-    writeStatusPage(req.body);
+    writeStatusPage(req.body, configDirFor(projectFrom(req)));
     res.json({ message: 'Status page config saved.' });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -207,21 +253,35 @@ app.put('/api/status-page', (req, res) => {
 });
 
 // ── History ───────────────────────────────────────────────────────────────────
-app.get('/api/history', (_req, res) => {
-  const history = readHistory();
+app.get('/api/history', (req, res) => {
+  const history = readHistory(configDirFor(projectFrom(req)));
   const uptime = computeUptime(history);
   res.json({ history: history.slice(0, 60), uptime });
 });
 
 // ── Public status page ────────────────────────────────────────────────────────
+// Status page slugs are looked up across every project, so a public URL
+// doesn't need to know which project it belongs to.
 app.get('/status/:slug', (req, res) => {
-  const cfg = readStatusPage();
-  if (!cfg.enabled || cfg.slug !== req.params.slug) return res.status(404).send('Status page not found.');
+  const slugs: (string | null)[] = [...listProjectSlugs(), ...(hasDefaultProjectData() ? [null] : [])];
+  let project: string | null | undefined;
+  let cfg: ReturnType<typeof readStatusPage> | undefined;
 
-  const lastRun = readLastRun();
-  const history = readHistory();
+  for (const slug of slugs) {
+    const candidate = readStatusPage(configDirFor(slug));
+    if (candidate.enabled && candidate.slug === req.params.slug) {
+      project = slug;
+      cfg = candidate;
+      break;
+    }
+  }
+
+  if (!cfg || project === undefined) return res.status(404).send('Status page not found.');
+
+  const lastRun = readLastRun(lastRunFor(project));
+  const history = readHistory(configDirFor(project));
   const uptime = computeUptime(history);
-  const meta = getAllMeta();
+  const meta = getAllMeta(configDirFor(project));
   const failedFiles = new Set((lastRun?.failures ?? []).map((f) => basename(f.file)));
 
   const tests = cfg.tests.map((filename) => {
@@ -290,5 +350,5 @@ function renderStatusPage({ name, tests, uptime, last60 }: {
 app.listen(PORT, () => {
   console.log(`\ntuxedo-qa dashboard → http://localhost:${PORT}\n`);
   startScheduler();
-  console.log('Scheduler active — checks every minute for tests due to run.\n');
+  console.log('Scheduler active — checks every minute, across every project, for tests due to run.\n');
 });

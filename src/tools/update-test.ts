@@ -1,7 +1,7 @@
 import { writeFileSync, existsSync } from 'fs';
 import { join, basename } from 'path';
 import { z } from 'zod';
-import { TESTS_DIR } from '../lib/paths.js';
+import { testsDirFor, configDirFor, CURRENT_PROJECT } from '../lib/paths.js';
 import { upsertTestMeta } from '../lib/test-metadata.js';
 
 export const updateTestSchema = z.object({
@@ -25,11 +25,12 @@ export const updateTestSchema = z.object({
 
 export type UpdateTestInput = z.infer<typeof updateTestSchema>;
 
-export function updateTest(input: UpdateTestInput): string {
+export function updateTest(input: UpdateTestInput, project?: string | null): string {
+  const p = project !== undefined ? project : CURRENT_PROJECT;
   const { name, test_code, display_name, description, schedule, enabled, credential } = input;
   const safeName = basename(name).replace(/\.spec\.ts$/, '');
   const filename = `${safeName}.spec.ts`;
-  const filePath = join(TESTS_DIR, filename);
+  const filePath = join(testsDirFor(p), filename);
 
   if (!existsSync(filePath)) {
     throw new Error(`Test "${filename}" not found. Use create_test to create it.`);
@@ -50,7 +51,7 @@ export function updateTest(input: UpdateTestInput): string {
   if (credential !== undefined) { metaUpdates.credential = credential; changes.push('credential'); }
 
   if (Object.keys(metaUpdates).length > 0) {
-    upsertTestMeta(filename, metaUpdates as Parameters<typeof upsertTestMeta>[1]);
+    upsertTestMeta(filename, metaUpdates as Parameters<typeof upsertTestMeta>[1], configDirFor(p));
   }
 
   if (changes.length === 0) {

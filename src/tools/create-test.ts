@@ -1,7 +1,7 @@
 import { writeFileSync, existsSync, mkdirSync, renameSync, unlinkSync } from 'fs';
 import { join, basename } from 'path';
 import { z } from 'zod';
-import { TESTS_DIR } from '../lib/paths.js';
+import { testsDirFor, configDirFor, lastRunFor, CURRENT_PROJECT } from '../lib/paths.js';
 import { upsertTestMeta } from '../lib/test-metadata.js';
 import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun } from '../lib/results-store.js';
@@ -25,12 +25,17 @@ export const createTestSchema = z.object({
 
 export type CreateTestInput = z.infer<typeof createTestSchema>;
 
-export async function createTest(input: CreateTestInput): Promise<string> {
-  mkdirSync(TESTS_DIR, { recursive: true });
+// `project` is only ever passed by the dashboard (which manages every
+// project from one process); an MCP connection is always scoped to a
+// single project via its own TUXEDO_QA_PROJECT, so tool calls never set it.
+export async function createTest(input: CreateTestInput, project?: string | null): Promise<string> {
+  const p = project !== undefined ? project : CURRENT_PROJECT;
+  const testsDir = testsDirFor(p);
+  mkdirSync(testsDir, { recursive: true });
 
   const safeName = basename(input.name).replace(/\.spec\.ts$/, '');
   const filename = `${safeName}.spec.ts`;
-  const finalPath = join(TESTS_DIR, filename);
+  const finalPath = join(testsDir, filename);
 
   if (existsSync(finalPath)) {
     throw new Error(`Test "${filename}" already exists. Use update_test to modify it.`);
@@ -38,14 +43,14 @@ export async function createTest(input: CreateTestInput): Promise<string> {
 
   // dry-run: write to a temp file, run, then promote or discard
   const dryRunFilename = `__dryrun_${safeName}.spec.ts`;
-  const dryRunPath = join(TESTS_DIR, dryRunFilename);
+  const dryRunPath = join(testsDir, dryRunFilename);
 
   writeFileSync(dryRunPath, input.test_code, 'utf-8');
 
   let dryRunResult: string;
   try {
-    const { exitCode } = await runPlaywright({ testFile: dryRunFilename });
-    const summary = readLastRun();
+    const { exitCode } = await runPlaywright({ testFile: dryRunFilename, project: p });
+    const summary = readLastRun(lastRunFor(p));
 
     const dryRunFailure = summary?.failures.find((f) => basename(f.file) === dryRunFilename);
 
@@ -58,7 +63,7 @@ export async function createTest(input: CreateTestInput): Promise<string> {
         tags: input.tags ?? [],
         ...(input.credential ? { credential: input.credential } : {}),
         enabled: true,
-      });
+      }, configDirFor(p));
 
       const parts = [`Test created and dry-run passed: ${finalPath}`];
       if (input.schedule) parts.push(`Schedule: every ${input.schedule}`);

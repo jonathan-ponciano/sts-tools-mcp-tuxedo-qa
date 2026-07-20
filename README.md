@@ -1,23 +1,24 @@
 # tuxedo-qa
 
-MCP server that lets [Claude](https://claude.com), [Gemini](https://gemini.google.com), and
-other MCP-compatible AI assistants create, run, self-heal, and monitor
-[Playwright](https://playwright.dev) tests for your web app — with a local dashboard,
-a credential vault, and a public status page.
+Servidor MCP que permite ao [Claude](https://claude.com), [Gemini](https://gemini.google.com) e
+outros assistentes de IA compatíveis com MCP criar, rodar, autocorrigir e monitorar testes
+[Playwright](https://playwright.dev) do seu app — com dashboard local, cofre de credenciais
+e página pública de status.
 
-**[Landing page & docs →](https://jonathan-ponciano.github.io/sts-tools-mcp-tuxedo-qa/)**
+**[Landing page e documentação →](https://jonathan-ponciano.github.io/sts-tools-mcp-tuxedo-qa/)**
 
-## What it is
+## O que é
 
-tuxedo-qa exposes 13 MCP tools covering the full lifecycle of a synthetic test suite:
-write specs in natural language, run them on demand or on a schedule, self-heal failures,
-gate staging environments behind protection headers, and surface results on a public
-status page — all driven from a conversation with your AI assistant, no CI pipeline required.
+O tuxedo-qa expõe 13 ferramentas MCP que cobrem todo o ciclo de vida de uma suíte de testes
+sintéticos: escrever specs em linguagem natural, rodar sob demanda ou por agendamento,
+autocorrigir falhas, acessar ambientes de staging protegidos por headers, e expor os
+resultados numa página pública de status — tudo conduzido por uma conversa com seu
+assistente de IA, sem precisar de pipeline de CI.
 
-See the [full tool reference and use cases](https://jonathan-ponciano.github.io/sts-tools-mcp-tuxedo-qa/#tools)
-on the landing page.
+Veja a [referência completa das ferramentas e casos de uso](https://jonathan-ponciano.github.io/sts-tools-mcp-tuxedo-qa/#tools)
+na landing page.
 
-## Quickstart
+## Como começar
 
 ```bash
 git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
@@ -26,33 +27,33 @@ npm install
 npm run build
 ```
 
-Register it as an MCP server. For Claude Code:
+Registre como servidor MCP. No Claude Code:
 
 ```bash
 claude mcp add tuxedoqa -- node "$(pwd)/dist/index.js"
 ```
 
-For Gemini CLI:
+No Gemini CLI:
 
 ```bash
 gemini mcp add tuxedoqa -- node "$(pwd)/dist/index.js"
 ```
 
-Optionally start the local dashboard:
+Opcionalmente, inicie o dashboard local:
 
 ```bash
 npm run dashboard
 # → http://localhost:3131
 ```
 
-## Development
+## Desenvolvimento
 
 ```bash
-npm run dev        # run the MCP server with tsx (no build step)
-npm run dashboard   # dashboard dev server
-npm test            # run the Playwright suite directly
+npm run dev         # roda o servidor MCP com tsx (sem build)
+npm run dashboard    # dashboard em modo dev
+npm test             # roda a suíte Playwright diretamente
 ```
 
-## License
+## Licença
 
 MIT

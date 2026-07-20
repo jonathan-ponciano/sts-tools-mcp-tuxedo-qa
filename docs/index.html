@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>tuxedo-qa — MCP server for Playwright QA automation</title>
-<meta name="description" content="tuxedo-qa is an MCP server that lets Claude, Gemini, and other AI assistants create, run, self-heal, and monitor Playwright tests directly, with a local dashboard, credential vault, and public status pages." />
+<title>tuxedo-qa — servidor MCP para automação de QA com Playwright</title>
+<meta name="description" content="tuxedo-qa é um servidor MCP que permite ao Claude, Gemini e outros assistentes de IA criar, rodar, autocorrigir e monitorar testes Playwright, com dashboard local, cofre de credenciais e páginas públicas de status." />
 <style>
   :root{
     --bg:#f9fafb; --bg-alt:#ffffff; --text:#111827; --text-dim:#6b7280;
@@ -108,10 +108,10 @@
   <div class="wrap">
     <div class="brand"><span class="dot"></span> tuxedo-qa</div>
     <div class="navlinks">
-      <a href="#features">Features</a>
-      <a href="#use-cases">Use cases</a>
-      <a href="#tools">MCP tools</a>
-      <a href="#quickstart">Quickstart</a>
+      <a href="#features">Recursos</a>
+      <a href="#use-cases">Casos de uso</a>
+      <a href="#tools">Ferramentas MCP</a>
+      <a href="#quickstart">Como começar</a>
       <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">GitHub</a>
     </div>
   </div>
@@ -119,70 +119,70 @@
 
 <header class="hero">
   <div class="wrap">
-    <span class="kicker">MCP server · Playwright · Claude · Gemini</span>
-    <h1>Let your AI agent own your QA loop.</h1>
+    <span class="kicker">Servidor MCP · Playwright · Claude · Gemini</span>
+    <h1>Deixe seu agente de IA cuidar do seu QA.</h1>
     <p class="lede">
-      tuxedo-qa is an MCP server that gives Claude, Gemini, and any other MCP-compatible
-      assistant the tools to write, run, self-heal, and monitor Playwright tests for your
-      web app — with a local dashboard, a credential vault, and a public status page,
-      no CI pipeline required.
+      tuxedo-qa é um servidor MCP que dá ao Claude, ao Gemini e a qualquer outro
+      assistente compatível com MCP as ferramentas para escrever, rodar, autocorrigir
+      e monitorar testes Playwright do seu app — com dashboard local, cofre de
+      credenciais e página pública de status, sem precisar de pipeline de CI.
     </p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">View on GitHub</a>
-      <a class="btn btn-secondary" href="#quickstart">Quickstart →</a>
+      <a class="btn btn-primary" href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Ver no GitHub</a>
+      <a class="btn btn-secondary" href="#quickstart">Como começar →</a>
     </div>
   </div>
 </header>
 
 <section id="features">
   <div class="wrap">
-    <h2>What it does</h2>
-    <p class="section-sub">A single MCP server, connected to Claude, Gemini, or any MCP-compatible client, exposing 13 tools that cover the full lifecycle of a synthetic test suite.</p>
+    <h2>O que ele faz</h2>
+    <p class="section-sub">Um único servidor MCP, conectado ao Claude, Gemini ou qualquer cliente compatível com MCP, expondo 13 ferramentas que cobrem todo o ciclo de vida de uma suíte de testes sintéticos.</p>
     <div class="grid">
       <div class="card">
         <span class="icon">✍️</span>
-        <h3>Natural-language test authoring</h3>
-        <p>Describe a flow, your AI agent writes the Playwright spec via <code>create_test</code> and saves it straight into the suite.</p>
+        <h3>Criação de testes em linguagem natural</h3>
+        <p>Descreva um fluxo — seu agente de IA escreve a spec Playwright via <code>create_test</code> e salva direto na suíte.</p>
       </div>
       <div class="card">
         <span class="icon">🩹</span>
-        <h3>Self-healing runs</h3>
-        <p><code>run_until_pass</code> re-runs a failing test, lets your AI agent patch it between attempts, until it goes green or hits the retry limit.</p>
+        <h3>Execução autocorretiva</h3>
+        <p><code>run_until_pass</code> roda o teste de novo, deixando seu agente de IA corrigi-lo entre as tentativas, até passar ou atingir o limite de tentativas.</p>
       </div>
       <div class="card">
         <span class="icon">⏱️</span>
-        <h3>Scheduled monitoring</h3>
-        <p>Attach a <code>1h</code> / <code>6h</code> / <code>24h</code> schedule to any test to run it as a synthetic monitor, not just a one-off check.</p>
+        <h3>Monitoramento agendado</h3>
+        <p>Anexe um schedule de <code>1h</code> / <code>6h</code> / <code>24h</code> a qualquer teste pra rodar como monitor sintético, não só uma checagem pontual.</p>
       </div>
       <div class="card">
         <span class="icon">🔐</span>
-        <h3>Credential vault</h3>
-        <p>Named credential sets (admin, user_comum, …) are stored once and injected into test runs — never pasted into prompts.</p>
+        <h3>Cofre de credenciais</h3>
+        <p>Conjuntos de credenciais nomeados (admin, user_comum, …) são salvos uma vez e injetados nas execuções — nunca colados nos prompts.</p>
       </div>
       <div class="card">
         <span class="icon">🛡️</span>
-        <h3>Protection bypass headers</h3>
-        <p>One-click presets for Vercel Protection Bypass, Cloudflare Access, and Basic Auth so tests can reach gated staging environments.</p>
+        <h3>Headers de bypass de proteção</h3>
+        <p>Presets prontos pra Vercel Protection Bypass, Cloudflare Access e Basic Auth, pra testes alcançarem ambientes de staging protegidos.</p>
       </div>
       <div class="card">
         <span class="icon">📟</span>
-        <h3>Local dashboard</h3>
-        <p>A zero-config web UI to browse tests, edit specs, trigger runs, and manage credentials without touching the CLI.</p>
+        <h3>Dashboard local</h3>
+        <p>Uma interface web sem configuração pra navegar pelos testes, editar specs, disparar execuções e gerenciar credenciais sem tocar na CLI.</p>
       </div>
       <div class="card">
         <span class="icon">📣</span>
-        <h3>Discord alerts</h3>
-        <p>Configure a webhook once and every run posts pass/fail results straight to your team's channel.</p>
+        <h3>Alertas no Discord</h3>
+        <p>Configure um webhook uma vez e toda execução posta o resultado (passou/falhou) direto no canal da sua equipe.</p>
       </div>
       <div class="card">
         <span class="icon">📊</span>
-        <h3>Public status page</h3>
-        <p>Turn any subset of tests into a shareable uptime page with a 60-run history bar, for stakeholders who don't need MCP access.</p>
+        <h3>Página pública de status</h3>
+        <p>Transforme qualquer subconjunto de testes numa página de uptime compartilhável, com histórico das últimas 60 execuções, pra stakeholders que não precisam de acesso MCP.</p>
       </div>
       <div class="card">
         <span class="icon">🧑‍🤝‍🧑</span>
         <h3>Human-in-the-loop</h3>
-        <p>Tests can pause mid-run and wait for a human-supplied value (2FA codes, OTPs) via a simple file-based signal.</p>
+        <p>Testes podem pausar no meio da execução e aguardar um valor fornecido por um humano (códigos de 2FA, OTPs) via um sinal simples baseado em arquivo.</p>
       </div>
     </div>
   </div>
@@ -190,33 +190,33 @@
 
 <section id="use-cases">
   <div class="wrap">
-    <h2>Use cases</h2>
-    <p class="section-sub">Built for teams that want real QA coverage without standing up a CI/CD testing pipeline.</p>
+    <h2>Casos de uso</h2>
+    <p class="section-sub">Feito pra times que querem cobertura de QA de verdade sem montar um pipeline de CI/CD de testes.</p>
     <div class="usecases">
       <div class="usecase">
         <div class="num">1</div>
-        <div><h3>Post-deploy smoke tests, driven from chat</h3>
-        <p>Ask Claude or Gemini to run the suite right after a deploy — <code>pause_tests</code> beforehand to avoid false alerts, then <code>run_tests</code> once you're live.</p></div>
+        <div><h3>Smoke tests pós-deploy, direto do chat</h3>
+        <p>Peça ao Claude ou Gemini pra rodar a suíte logo após um deploy — use <code>pause_tests</code> antes pra evitar alertas falsos, depois <code>run_tests</code> assim que estiver no ar.</p></div>
       </div>
       <div class="usecase">
         <div class="num">2</div>
-        <div><h3>Continuous synthetic monitoring</h3>
-        <p>Schedule critical flows (login, checkout, lead capture) to run every hour and surface failures via Discord before customers notice.</p></div>
+        <div><h3>Monitoramento sintético contínuo</h3>
+        <p>Agende fluxos críticos (login, checkout, captura de lead) pra rodar a cada hora e detectar falhas via Discord antes que os clientes percebam.</p></div>
       </div>
       <div class="usecase">
         <div class="num">3</div>
-        <div><h3>Testing behind auth walls</h3>
-        <p>Staging environments protected by Vercel/Cloudflare Access or Basic Auth are reachable via the built-in protection header presets.</p></div>
+        <div><h3>Testes atrás de autenticação</h3>
+        <p>Ambientes de staging protegidos por Vercel/Cloudflare Access ou Basic Auth ficam acessíveis via os presets de headers de proteção já embutidos.</p></div>
       </div>
       <div class="usecase">
         <div class="num">4</div>
-        <div><h3>Flows that need a human for one step</h3>
-        <p>SMS/email 2FA steps pause the test and wait for a value you supply through your AI agent, then resume automatically.</p></div>
+        <div><h3>Fluxos que precisam de um humano numa etapa</h3>
+        <p>Etapas de 2FA por SMS/e-mail pausam o teste e aguardam um valor fornecido pelo seu agente de IA, retomando automaticamente.</p></div>
       </div>
       <div class="usecase">
         <div class="num">5</div>
-        <div><h3>A status page for non-technical stakeholders</h3>
-        <p>Expose a curated set of tests as a public uptime page — no dashboard login, no MCP client required to view it.</p></div>
+        <div><h3>Página de status pra stakeholders não-técnicos</h3>
+        <p>Exponha um conjunto selecionado de testes como uma página pública de uptime — sem login no dashboard, sem precisar de cliente MCP pra ver.</p></div>
       </div>
     </div>
   </div>
@@ -224,25 +224,25 @@
 
 <section id="tools">
   <div class="wrap">
-    <h2>MCP tools reference</h2>
-    <p class="section-sub">Everything Claude, Gemini, or any other MCP client can call once the server is connected.</p>
+    <h2>Referência das ferramentas MCP</h2>
+    <p class="section-sub">Tudo que o Claude, Gemini ou qualquer outro cliente MCP pode chamar assim que o servidor estiver conectado.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+        <thead><tr><th>Ferramenta</th><th>O que faz</th></tr></thead>
         <tbody>
-          <tr><td><code>create_test</code></td><td>Create a new Playwright test file from generated test code.</td></tr>
-          <tr><td><code>list_tests</code></td><td>List all test files with their last known status; filter by status or limit.</td></tr>
-          <tr><td><code>read_test</code></td><td>Read the contents of a test file.</td></tr>
-          <tr><td><code>update_test</code></td><td>Update a test's script, display name, description, schedule, or enabled state.</td></tr>
-          <tr><td><code>delete_test</code></td><td>Permanently delete a test and its history. Prefer disabling via <code>update_test</code>.</td></tr>
-          <tr><td><code>run_tests</code></td><td>Run all tests or a specific file; respects pause state; notifies Discord if configured.</td></tr>
-          <tr><td><code>run_until_pass</code></td><td>Run a test repeatedly, applying fixes between attempts, until it passes or hits the retry cap.</td></tr>
-          <tr><td><code>get_status</code></td><td>Overall suite status, or per-test failure detail and fix suggestions.</td></tr>
-          <tr><td><code>pause_tests</code></td><td>Pause the whole suite for up to 60 minutes — auto-resumes.</td></tr>
-          <tr><td><code>set_webhook</code></td><td>Configure the Discord webhook URL used for run notifications.</td></tr>
-          <tr><td><code>create_credential</code></td><td>Create or update a named credential set (key-value fields).</td></tr>
-          <tr><td><code>list_credentials</code></td><td>List saved credential sets with masked values.</td></tr>
-          <tr><td><code>delete_credential</code></td><td>Delete a named credential set.</td></tr>
+          <tr><td><code>create_test</code></td><td>Cria um novo arquivo de teste Playwright a partir do código gerado.</td></tr>
+          <tr><td><code>list_tests</code></td><td>Lista todos os testes com o último status conhecido; filtra por status ou limite.</td></tr>
+          <tr><td><code>read_test</code></td><td>Lê o conteúdo de um arquivo de teste.</td></tr>
+          <tr><td><code>update_test</code></td><td>Atualiza script, nome de exibição, descrição, schedule ou estado (ativo/inativo) de um teste.</td></tr>
+          <tr><td><code>delete_test</code></td><td>Apaga um teste e seu histórico permanentemente. Prefira desativar via <code>update_test</code>.</td></tr>
+          <tr><td><code>run_tests</code></td><td>Roda todos os testes ou um arquivo específico; respeita o estado de pausa; notifica o Discord se configurado.</td></tr>
+          <tr><td><code>run_until_pass</code></td><td>Roda um teste repetidamente, aplicando correções entre tentativas, até passar ou atingir o limite de tentativas.</td></tr>
+          <tr><td><code>get_status</code></td><td>Status geral da suíte, ou detalhe de falha e sugestões de correção por teste.</td></tr>
+          <tr><td><code>pause_tests</code></td><td>Pausa toda a suíte por até 60 minutos — retoma automaticamente.</td></tr>
+          <tr><td><code>set_webhook</code></td><td>Configura a URL do webhook do Discord usada nas notificações de execução.</td></tr>
+          <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado (campos chave-valor).</td></tr>
+          <tr><td><code>list_credentials</code></td><td>Lista os conjuntos de credenciais salvos com valores mascarados.</td></tr>
+          <tr><td><code>delete_credential</code></td><td>Apaga um conjunto de credenciais nomeado.</td></tr>
         </tbody>
       </table>
     </div>
@@ -251,12 +251,12 @@
 
 <section id="quickstart">
   <div class="wrap">
-    <h2>Quickstart</h2>
-    <p class="section-sub">Runs entirely on your machine — a local MCP server plus an optional dashboard.</p>
+    <h2>Como começar</h2>
+    <p class="section-sub">Roda inteiramente na sua máquina — um servidor MCP local mais um dashboard opcional.</p>
     <div class="steps">
       <div class="step">
         <div class="step-body">
-          <h3>Clone and install</h3>
+          <h3>Clonar e instalar</h3>
           <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
 cd sts-tools-mcp-tuxedo-qa
 npm install
@@ -265,24 +265,24 @@ npm run build</code></pre>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Register it as an MCP server</h3>
-          <p>Works with any MCP-compatible client. For example, Claude Code:</p>
+          <h3>Registrar como servidor MCP</h3>
+          <p>Funciona com qualquer cliente compatível com MCP. Por exemplo, no Claude Code:</p>
           <pre><code>claude mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
-          <p>Or Gemini CLI:</p>
+          <p>Ou no Gemini CLI:</p>
           <pre><code>gemini mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>(Optional) start the local dashboard</h3>
+          <h3>(Opcional) iniciar o dashboard local</h3>
           <pre><code>npm run dashboard
 # → http://localhost:3131</code></pre>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Ask your AI agent to create your first test</h3>
-          <p>"Create a Playwright test that logs into staging and checks the dashboard loads" — Claude or Gemini calls <code>create_test</code>, saves the spec, and can run it immediately with <code>run_tests</code>.</p>
+          <h3>Peça ao seu agente de IA pra criar o primeiro teste</h3>
+          <p>"Crie um teste Playwright que faz login no staging e confere se o dashboard carrega" — o Claude ou Gemini chama <code>create_test</code>, salva a spec, e pode rodar na hora com <code>run_tests</code>.</p>
         </div>
       </div>
     </div>
@@ -291,7 +291,7 @@ npm run build</code></pre>
 
 <footer>
   <div class="wrap">
-    <p>tuxedo-qa — MCP server for Playwright QA automation. <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Source on GitHub</a></p>
+    <p>tuxedo-qa — servidor MCP para automação de QA com Playwright. <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Código no GitHub</a></p>
   </div>
 </footer>
 

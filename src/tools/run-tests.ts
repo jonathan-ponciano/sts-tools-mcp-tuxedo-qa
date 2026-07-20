@@ -1,13 +1,13 @@
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, writeFileSync } from 'fs';
 import { basename } from 'path';
 import { z } from 'zod';
 import { runPlaywright } from '../lib/playwright-runner.js';
-import { readLastRun } from '../lib/results-store.js';
+import { readLastRun, type RunSummary } from '../lib/results-store.js';
 import { sendDiscordWebhook } from '../lib/discord-webhook.js';
 import { readWebhook } from '../lib/webhook-store.js';
 import { testsDirFor, configDirFor, lastRunFor, CURRENT_PROJECT } from '../lib/paths.js';
 import { isTestsPaused } from './pause-tests.js';
-import { getTestMeta, upsertTestMeta } from '../lib/test-metadata.js';
+import { getAllMeta, getTestMeta, upsertTestMeta } from '../lib/test-metadata.js';
 
 export const runTestsSchema = z.object({
   test_file: z
@@ -22,15 +22,7 @@ export const runTestsSchema = z.object({
 
 export type RunTestsInput = z.infer<typeof runTestsSchema>;
 
-function isTestEnabled(testFile: string | undefined, configDir: string): { enabled: boolean; file?: string } {
-  if (!testFile) return { enabled: true };
-  const filename = basename(testFile);
-  const meta = getTestMeta(filename.endsWith('.spec.ts') ? filename : `${filename}.spec.ts`, configDir);
-  return { enabled: meta?.enabled ?? true, file: filename };
-}
-
-function formatSummary(exitCode: number, output: string, lastRunPath: string): string {
-  const summary = readLastRun(lastRunPath);
+function formatSummary(summary: RunSummary | null, exitCode: number, output: string): string {
   if (!summary) return `Playwright exited with code ${exitCode}.\n\n${output}`;
 
   const lines = [
@@ -50,18 +42,75 @@ function formatSummary(exitCode: number, output: string, lastRunPath: string): s
   return lines.join('\n');
 }
 
-// Stamp last_run_at on whichever test(s) this invocation covered, so the
-// scheduler knows when each one is next due.
-function markRan(testFile: string | undefined, ranAt: string, testsDir: string, configDir: string): void {
-  if (testFile) {
-    const filename = basename(testFile.endsWith('.spec.ts') ? testFile : `${testFile}.spec.ts`);
-    upsertTestMeta(filename, { last_run_at: ranAt }, configDir);
-    return;
+async function notifyWebhook(summary: RunSummary | null, configDir: string): Promise<void> {
+  const webhook = readWebhook(configDir);
+  if (!webhook || !summary) return;
+  const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
+  if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});
+}
+
+// Runs one specific test file, credential included.
+async function runOneFile(
+  testFile: string,
+  configDir: string,
+  lastRunPath: string,
+  project: string | null,
+): Promise<{ exitCode: number; output: string; summary: RunSummary | null }> {
+  const filename = basename(testFile.endsWith('.spec.ts') ? testFile : `${testFile}.spec.ts`);
+  const credentialLabel = getTestMeta(filename, configDir)?.credential;
+
+  const { exitCode, output } = await runPlaywright({ testFile: filename, credentialLabel, project });
+  const summary = readLastRun(lastRunPath);
+  upsertTestMeta(filename, { last_run_at: summary?.run_at ?? new Date().toISOString() }, configDir);
+
+  return { exitCode, output, summary };
+}
+
+// Runs every enabled test file one at a time — each gets its own credential
+// injected, which a single shared Playwright process (one env var for the
+// whole run) can't do. Slower than letting Playwright parallelize across
+// files itself, but the only way "run all" ends up correct when different
+// tests need different credential sets.
+async function runAllEnabledFiles(
+  testsDir: string,
+  configDir: string,
+  lastRunPath: string,
+  project: string | null,
+): Promise<{ exitCode: number; output: string; summary: RunSummary | null }> {
+  if (!existsSync(testsDir)) return { exitCode: 1, output: 'No tests directory found.', summary: null };
+
+  const meta = getAllMeta(configDir);
+  const files = readdirSync(testsDir)
+    .filter((f) => f.endsWith('.spec.ts'))
+    .filter((f) => meta[f]?.enabled !== false);
+
+  const summaries: RunSummary[] = [];
+  const outputs: string[] = [];
+  let lastExitCode = 0;
+
+  for (const file of files) {
+    const result = await runOneFile(file, configDir, lastRunPath, project);
+    outputs.push(result.output);
+    lastExitCode = result.exitCode;
+    if (result.summary) summaries.push(result.summary);
   }
-  if (!existsSync(testsDir)) return;
-  for (const file of readdirSync(testsDir).filter((f) => f.endsWith('.spec.ts'))) {
-    upsertTestMeta(file, { last_run_at: ranAt }, configDir);
-  }
+
+  if (summaries.length === 0) return { exitCode: lastExitCode, output: outputs.join('\n'), summary: null };
+
+  const merged: RunSummary = {
+    run_at: summaries[0].run_at,
+    duration_ms: summaries.reduce((sum, s) => sum + s.duration_ms, 0),
+    passed: summaries.reduce((sum, s) => sum + s.passed, 0),
+    failed: summaries.reduce((sum, s) => sum + s.failed, 0),
+    skipped: summaries.reduce((sum, s) => sum + s.skipped, 0),
+    failures: summaries.flatMap((s) => s.failures),
+  };
+
+  // Persist the merged view so anything reading last-run.json afterward
+  // (dashboard, get_status) sees the whole batch, not just the last file.
+  writeFileSync(lastRunPath, JSON.stringify(merged, null, 2), 'utf-8');
+
+  return { exitCode: merged.failed > 0 ? 1 : 0, output: outputs.join('\n'), summary: merged };
 }
 
 // `project` is only ever passed by the dashboard — an MCP connection is
@@ -81,42 +130,25 @@ export async function runTests(input: RunTestsInput, project?: string | null): P
     return lines.join('\n');
   }
 
-  const { enabled, file } = isTestEnabled(input.test_file, configDir);
-  if (!enabled) {
-    return `Test "${file}" is disabled. Use update_test with enabled: true to re-enable it.`;
-  }
-
-  const waitForResult = input.wait_for_result ?? true;
-
-  const credentialLabel = input.test_file
-    ? getTestMeta(basename(input.test_file.endsWith('.spec.ts') ? input.test_file : `${input.test_file}.spec.ts`), configDir)?.credential
-    : undefined;
-
-  if (!waitForResult) {
-    runPlaywright({ testFile: input.test_file, credentialLabel, project: p }).then(async ({ exitCode, output }) => {
-      const summary = readLastRun(lastRunPath);
-      markRan(input.test_file, summary?.run_at ?? new Date().toISOString(), testsDir, configDir);
-      void exitCode; void output;
-
-      const webhook = readWebhook(configDir);
-      if (!webhook || !summary) return;
-      const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
-      if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});
-    });
-    return 'Test run started in background. Use get_status to check results.';
-  }
-
-  const { exitCode, output } = await runPlaywright({ testFile: input.test_file, credentialLabel, project: p });
-  const summary = readLastRun(lastRunPath);
-  markRan(input.test_file, summary?.run_at ?? new Date().toISOString(), testsDir, configDir);
-
-  const webhook = readWebhook(configDir);
-  if (webhook && summary) {
-    const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
-    if (shouldNotify) {
-      try { await sendDiscordWebhook(webhook.url, summary); } catch { /* non-fatal */ }
+  if (input.test_file) {
+    const filename = basename(input.test_file.endsWith('.spec.ts') ? input.test_file : `${input.test_file}.spec.ts`);
+    const meta = getTestMeta(filename, configDir);
+    if (meta?.enabled === false) {
+      return `Test "${filename}" is disabled. Use update_test with enabled: true to re-enable it.`;
     }
   }
 
-  return formatSummary(exitCode, output, lastRunPath);
+  const waitForResult = input.wait_for_result ?? true;
+  const run = () => input.test_file
+    ? runOneFile(input.test_file!, configDir, lastRunPath, p)
+    : runAllEnabledFiles(testsDir, configDir, lastRunPath, p);
+
+  if (!waitForResult) {
+    run().then(({ summary }) => notifyWebhook(summary, configDir));
+    return 'Test run started in background. Use get_status to check results.';
+  }
+
+  const { exitCode, output, summary } = await run();
+  await notifyWebhook(summary, configDir);
+  return formatSummary(summary, exitCode, output);
 }

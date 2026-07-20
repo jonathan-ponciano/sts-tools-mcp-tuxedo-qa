@@ -26,6 +26,7 @@ import {
   configDirFor,
   resultsDirFor,
   lastRunFor,
+  ensureProjectReady,
 } from './lib/paths.js';
 import { startScheduler, getSchedulerState, nextRunAt } from './lib/scheduler.js';
 
@@ -97,7 +98,7 @@ app.post('/api/projects', (req, res) => {
   if (listProjectSlugs().includes(slug)) {
     return res.status(400).json({ error: `Projeto "${slug}" já existe.` });
   }
-  mkdirSync(testsDirFor(slug), { recursive: true });
+  ensureProjectReady(slug);
   mkdirSync(configDirFor(slug), { recursive: true });
   mkdirSync(resultsDirFor(slug), { recursive: true });
   res.json({ message: `Projeto "${slug}" criado.` });

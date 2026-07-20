@@ -111,12 +111,27 @@ function collectFailures(suites: PWSuite[], parentFile = ''): TestFailure[] {
   return failures;
 }
 
+function isPrecomputedSummary(value: unknown): value is RunSummary {
+  return (
+    typeof value === 'object' && value !== null &&
+    'run_at' in value && 'passed' in value && 'failed' in value &&
+    'skipped' in value && 'failures' in value
+  );
+}
+
 export function readLastRun(path: string = LAST_RUN): RunSummary | null {
   if (!existsSync(path)) return null;
 
   const raw = readFileSync(path, 'utf-8');
-  const report: PWReport = JSON.parse(raw);
+  const parsed = JSON.parse(raw) as PWReport | RunSummary;
 
+  // "Run all" merges several individual Playwright reports (one credential
+  // per file means one process per file) into a single already-computed
+  // RunSummary and writes it here directly — recognize and pass it through
+  // rather than trying to reparse it as a raw Playwright report.
+  if (isPrecomputedSummary(parsed)) return parsed;
+
+  const report = parsed as PWReport;
   return {
     run_at: report.stats.startTime,
     duration_ms: report.stats.duration,

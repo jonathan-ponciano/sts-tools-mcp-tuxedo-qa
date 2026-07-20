@@ -1,7 +1,7 @@
-import { writeFileSync, existsSync, mkdirSync, renameSync, unlinkSync } from 'fs';
+import { writeFileSync, existsSync, renameSync, unlinkSync } from 'fs';
 import { join, basename } from 'path';
 import { z } from 'zod';
-import { testsDirFor, configDirFor, lastRunFor, CURRENT_PROJECT } from '../lib/paths.js';
+import { testsDirFor, configDirFor, lastRunFor, ensureProjectReady, CURRENT_PROJECT } from '../lib/paths.js';
 import { upsertTestMeta } from '../lib/test-metadata.js';
 import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun } from '../lib/results-store.js';
@@ -31,7 +31,7 @@ export type CreateTestInput = z.infer<typeof createTestSchema>;
 export async function createTest(input: CreateTestInput, project?: string | null): Promise<string> {
   const p = project !== undefined ? project : CURRENT_PROJECT;
   const testsDir = testsDirFor(p);
-  mkdirSync(testsDir, { recursive: true });
+  ensureProjectReady(p);
 
   const safeName = basename(input.name).replace(/\.spec\.ts$/, '');
   const filename = `${safeName}.spec.ts`;
@@ -49,7 +49,7 @@ export async function createTest(input: CreateTestInput, project?: string | null
 
   let dryRunResult: string;
   try {
-    const { exitCode } = await runPlaywright({ testFile: dryRunFilename, project: p });
+    const { exitCode } = await runPlaywright({ testFile: dryRunFilename, credentialLabel: input.credential, project: p });
     const summary = readLastRun(lastRunFor(p));
 
     const dryRunFailure = summary?.failures.find((f) => basename(f.file) === dryRunFilename);

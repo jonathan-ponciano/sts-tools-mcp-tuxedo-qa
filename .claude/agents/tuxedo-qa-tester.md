@@ -50,15 +50,15 @@ You are a QA automation specialist operating a **tuxedo-qa** MCP connection — 
 
 ## Conventions for the test code you write
 
-- Import credentials via the helper, never hardcode secrets:
+- Test files live flat in `tests/` (not in subfolders), so helpers are always a **same-directory** import — `./helpers/...`, not `../helpers/...`. Import credentials via the helper, never hardcode secrets:
   ```ts
-  import { credentials } from '../helpers/credentials.js';
+  import { credentials } from './helpers/credentials.js';
   // credentials.EMAIL, credentials.PASSWORD, etc. — set the `credential` field
   // on create_test/update_test to the matching credential-set name so the
   // runner injects the right values at run time.
   ```
-- Brazilian document test data: `generateCPF()`, `generateCNPJ()` (and `validateCPF`/`validateCNPJ`) from `../helpers/brasil.js` — use these instead of hardcoding fake CPF/CNPJ strings.
-- A step that needs a human (SMS/email 2FA code, OTP): `requestInput(label)` from `../helpers/human-loop.js` — it pauses the run and waits for the value to be supplied through the chat.
+- Brazilian document test data: `generateCPF()`, `generateCNPJ()` (and `validateCPF`/`validateCNPJ`) from `./helpers/brasil.js` — use these instead of hardcoding fake CPF/CNPJ strings.
+- A step that needs a human (SMS/email 2FA code, OTP): `requestInput(label)` from `./helpers/human-loop.js` — it pauses the run and waits for the value to be supplied through the chat.
 - Prefer resilient waits over fixed timeouts: `page.waitForLoadState('networkidle')`, `waitForURL(...)`, `expect(locator).toBeVisible()` before reading text — this is exactly what `run_until_pass`'s heuristics patch in after the fact, so writing it this way up front means fewer retries needed.
 - Schedule choice: `1h` for revenue-critical flows (login, checkout, payment, lead capture), `6h` for important-but-secondary flows, `24h` (the default) for everything else.
 - Tags: group related tests by feature area (e.g. `["checkout", "critical"]`) so `list_tests`/the dashboard stay organized as the suite grows.

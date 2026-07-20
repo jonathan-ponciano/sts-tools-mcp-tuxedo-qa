@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, mkdirSync, symlinkSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,6 +28,26 @@ export function testsDirFor(slug: string | null): string { return join(namespace
 export function resultsDirFor(slug: string | null): string { return join(namespaceFor(slug), 'results'); }
 export function configDirFor(slug: string | null): string { return join(namespaceFor(slug), 'config'); }
 export function lastRunFor(slug: string | null): string { return join(resultsDirFor(slug), 'last-run.json'); }
+
+// Test specs always import shared helpers the same way — `./helpers/xxx.js`
+// — regardless of project. For the default (unnamespaced) project that's
+// just ROOT/tests/helpers/, already on disk. A namespaced project's tests
+// live one level deeper (projects/<slug>/tests/), so it gets a symlink back
+// to the same shared helpers, keeping the import path identical everywhere.
+export function ensureProjectReady(slug: string | null): void {
+  const testsDir = testsDirFor(slug);
+  mkdirSync(testsDir, { recursive: true });
+  if (!slug) return;
+
+  const helpersLink = join(testsDir, 'helpers');
+  if (!existsSync(helpersLink)) {
+    try {
+      symlinkSync(join(ROOT, 'tests', 'helpers'), helpersLink, 'dir');
+    } catch {
+      // best-effort — e.g. a real (non-symlink) helpers/ already exists there
+    }
+  }
+}
 
 // For the dashboard, which (unlike the MCP tools) needs to see every
 // project at once rather than just the one its own env points to.

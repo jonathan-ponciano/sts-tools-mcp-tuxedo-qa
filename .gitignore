@@ -4,6 +4,10 @@ test-results/
 results/
 .claude/
 
+# per-project namespaces (TUXEDO_QA_PROJECT) — each holds its own
+# tests/config/results, never shared across installs
+projects/
+
 # per-business runtime data — never commit real credentials/config
 config/*.json
 

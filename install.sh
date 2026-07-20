@@ -6,14 +6,23 @@
 #   curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/install.sh | bash
 #
 # Env vars:
-#   TUXEDO_QA_DIR   install location (default: $HOME/tuxedo-qa)
-#   TUXEDO_QA_NAME  MCP server name to register (default: tuxedoqa)
+#   TUXEDO_QA_DIR      install location (default: $HOME/tuxedo-qa) — shared by all projects
+#   TUXEDO_QA_PROJECT  project slug — set this to monitor more than one app/client from the
+#                      same install. Each slug gets its own isolated tests/config/results
+#                      under projects/<slug>/. Re-run this script once per project, with a
+#                      different TUXEDO_QA_PROJECT each time, to register all of them.
+#   TUXEDO_QA_NAME     MCP server name to register (default: tuxedoqa, or tuxedoqa-<project>)
+#
+# Example, two clients sharing one install:
+#   TUXEDO_QA_PROJECT=cliente-a bash install.sh
+#   TUXEDO_QA_PROJECT=cliente-b bash install.sh
 
 set -euo pipefail
 
 REPO_URL="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git"
 INSTALL_DIR="${TUXEDO_QA_DIR:-$HOME/tuxedo-qa}"
-MCP_NAME="${TUXEDO_QA_NAME:-tuxedoqa}"
+PROJECT="${TUXEDO_QA_PROJECT:-}"
+MCP_NAME="${TUXEDO_QA_NAME:-$([ -n "$PROJECT" ] && echo "tuxedoqa-$PROJECT" || echo "tuxedoqa")}"
 
 info() { printf '\033[1;34m▸\033[0m %s\n' "$1"; }
 ok()   { printf '\033[1;32m✔\033[0m %s\n' "$1"; }
@@ -49,9 +58,11 @@ DIST_ENTRY="$INSTALL_DIR/dist/index.js"
 # command; Gemini CLI doesn't and uses different scope values), so build the
 # add command per-CLI rather than sharing one command line.
 add_command_for() {
+  local env_args=""
+  [ -n "$PROJECT" ] && env_args="-e TUXEDO_QA_PROJECT=$PROJECT"
   case "$1" in
-    claude) echo "claude mcp add $MCP_NAME --scope user -- node \"$DIST_ENTRY\"" ;;
-    gemini) echo "gemini mcp add $MCP_NAME node \"$DIST_ENTRY\" --scope user" ;;
+    claude) echo "claude mcp add $MCP_NAME --scope user $env_args -- node \"$DIST_ENTRY\"" ;;
+    gemini) echo "gemini mcp add $MCP_NAME node \"$DIST_ENTRY\" --scope user $env_args" ;;
   esac
 }
 
@@ -88,9 +99,15 @@ fi
 
 echo ""
 ok "tuxedo-qa instalado em $INSTALL_DIR"
+[ -n "$PROJECT" ] && echo "   Projeto: $PROJECT (tests/config isolados em projects/$PROJECT/)"
 echo ""
 echo "Próximos passos:"
 echo "  1. Reinicie/reconecte sua CLI de IA pra carregar o servidor MCP novo."
-echo "  2. (Opcional) inicie o dashboard de monitoramento:"
-echo "       cd \"$INSTALL_DIR\" && npm run dashboard"
+if [ -n "$PROJECT" ]; then
+  echo "  2. (Opcional) inicie o dashboard deste projeto (use uma PORT diferente por projeto):"
+  echo "       cd \"$INSTALL_DIR\" && TUXEDO_QA_PROJECT=$PROJECT PORT=3131 npm run dashboard"
+else
+  echo "  2. (Opcional) inicie o dashboard de monitoramento:"
+  echo "       cd \"$INSTALL_DIR\" && npm run dashboard"
+fi
 echo "  3. Peça ao seu agente pra criar o primeiro teste."

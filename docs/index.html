@@ -283,6 +283,15 @@ npm install && npm run build</code></pre>
       </div>
       <div class="step">
         <div class="step-body">
+          <h3>Monitorando mais de um app/cliente?</h3>
+          <p>Uma instalação só serve vários projetos isolados — cada um com seus próprios testes, credenciais e histórico. Rode o instalador de novo com um slug diferente por projeto:</p>
+          <pre><code>TUXEDO_QA_PROJECT=cliente-a bash install.sh
+TUXEDO_QA_PROJECT=cliente-b bash install.sh</code></pre>
+          <p>Isso registra <code>tuxedoqa-cliente-a</code> e <code>tuxedoqa-cliente-b</code> como servidores MCP separados. Sem essa variável, tudo roda no modo padrão (um projeto só).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
           <h3>Peça ao seu agente de IA pra criar o primeiro teste</h3>
           <p>"Crie um teste Playwright que faz login no staging e confere se o dashboard carrega" — o Claude ou Gemini chama <code>create_test</code>, salva a spec, e pode rodar na hora com <code>run_tests</code>.</p>
         </div>

@@ -61,6 +61,29 @@ npm run dashboard
 # → http://localhost:3131
 ```
 
+## Monitorando mais de um app/cliente
+
+Tests, credenciais e config ficam salvos dentro da própria instalação — se você usa o
+tuxedo-qa pra mais de um projeto, use `TUXEDO_QA_PROJECT` pra isolar cada um (uma
+instalação só, vários projetos separados, cada um com seus próprios testes/credenciais/
+histórico):
+
+```bash
+TUXEDO_QA_PROJECT=cliente-a bash install.sh   # registra "tuxedoqa-cliente-a"
+TUXEDO_QA_PROJECT=cliente-b bash install.sh   # registra "tuxedoqa-cliente-b"
+```
+
+Cada um vira um servidor MCP com nome próprio, completamente isolado (`projects/cliente-a/`,
+`projects/cliente-b/`). Pra rodar o dashboard de um projeto específico:
+
+```bash
+TUXEDO_QA_PROJECT=cliente-a PORT=3131 npm run dashboard
+TUXEDO_QA_PROJECT=cliente-b PORT=3132 npm run dashboard   # porta diferente por projeto
+```
+
+Sem `TUXEDO_QA_PROJECT`, tudo cai no modo padrão (um projeto só, sem namespace) — não muda
+nada pra quem usa só um app.
+
 ## Desenvolvimento
 
 ```bash

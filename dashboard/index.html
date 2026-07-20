@@ -220,6 +220,16 @@
 
     <div class="overflow-y-auto flex-1 px-5 py-4 space-y-4">
       <!-- Meta -->
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Nome de exibição</label>
+        <input id="edit-display-name" type="text" placeholder="Ex: Validações do lead-api"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Descrição — o que esse teste confere</label>
+        <textarea id="edit-description" rows="2" placeholder="Ex: Confere as validações de campo obrigatório e formato do endpoint de leads."
+          class="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
+      </div>
       <div class="grid grid-cols-2 gap-3 text-sm">
         <div>
           <label class="block text-xs text-gray-500 mb-1">Schedule</label>
@@ -271,9 +281,19 @@
     </div>
     <div class="overflow-y-auto flex-1 px-5 py-4 space-y-3">
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Nome (sem extensão)</label>
+        <label class="block text-xs text-gray-500 mb-1">Nome do arquivo (sem extensão)</label>
         <input id="create-name" type="text" placeholder="login-meuapp"
           class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Nome de exibição (opcional)</label>
+        <input id="create-display-name" type="text" placeholder="Ex: Validações do lead-api"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Descrição — o que esse teste confere</label>
+        <textarea id="create-description" rows="2" placeholder="Ex: Confere as validações de campo obrigatório e formato do endpoint de leads."
+          class="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -485,14 +505,18 @@ function renderTests() {
   el.innerHTML = _tests.map(t => `
     <div onclick="openTest('${t.filename}')"
       class="flex items-center justify-between bg-white border rounded-xl px-4 py-3 cursor-pointer hover:border-indigo-300 transition">
-      <div class="flex items-center gap-3">
-        <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
-        ${t.running ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">rodando</span>' : ''}
-        <span class="text-sm font-medium">${t.filename}</span>
-        ${t.credential ? `<span class="text-xs text-gray-400">🔑 ${t.credential}</span>` : ''}
-        ${t.tags?.length ? `<span class="text-xs text-gray-400">${t.tags.join(', ')}</span>` : ''}
+      <div class="min-w-0">
+        <div class="flex items-center gap-3">
+          <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
+          ${t.running ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">rodando</span>' : ''}
+          <span class="text-sm font-medium" title="${t.filename}">${t.name || t.filename}</span>
+          ${t.name ? `<span class="text-xs text-gray-400 font-mono">${t.filename}</span>` : ''}
+          ${t.credential ? `<span class="text-xs text-gray-400">🔑 ${t.credential}</span>` : ''}
+          ${t.tags?.length ? `<span class="text-xs text-gray-400">${t.tags.join(', ')}</span>` : ''}
+        </div>
+        ${t.description ? `<p class="text-xs text-gray-400 mt-0.5 truncate">${t.description}</p>` : ''}
       </div>
-      <span class="text-xs text-gray-400">${t.schedule ?? '—'}${t.next_run_at ? ' · próx. ' + fmtRelative(t.next_run_at) : ''}</span>
+      <span class="text-xs text-gray-400 shrink-0 ml-3">${t.schedule ?? '—'}${t.next_run_at ? ' · próx. ' + fmtRelative(t.next_run_at) : ''}</span>
     </div>
   `).join('');
 }
@@ -574,7 +598,7 @@ function renderMonitorTests(tests) {
       <div class="flex items-center gap-3">
         <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
         ${t.running ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">rodando</span>' : ''}
-        <span class="text-sm font-medium">${t.filename}</span>
+        <span class="text-sm font-medium" title="${t.filename}">${t.name || t.filename}</span>
         <span class="text-xs text-gray-400">a cada ${t.schedule}</span>
       </div>
       <div class="text-xs text-gray-400 text-right">
@@ -630,8 +654,10 @@ async function openTest(name) {
   const r = await apiFetch(`/api/tests/${name}`).then(r => r.json());
   _currentTest = r;
 
-  document.getElementById('modal-test-title').textContent = r.filename;
+  document.getElementById('modal-test-title').textContent = r.meta?.name ? `${r.meta.name} (${r.filename})` : r.filename;
   document.getElementById('edit-code').value = r.code;
+  document.getElementById('edit-display-name').value = r.meta?.name ?? '';
+  document.getElementById('edit-description').value = r.meta?.description ?? '';
   document.getElementById('edit-schedule').value = r.meta?.schedule ?? '24h';
   document.getElementById('modal-run-result').textContent = '';
 
@@ -664,6 +690,8 @@ async function saveTest() {
   if (!_currentTest) return;
   const body = {
     test_code: document.getElementById('edit-code').value,
+    display_name: document.getElementById('edit-display-name').value || undefined,
+    description: document.getElementById('edit-description').value || undefined,
     schedule: document.getElementById('edit-schedule').value,
     credential: document.getElementById('edit-credential').value || undefined,
   };
@@ -706,6 +734,8 @@ async function deleteTest() {
 // ── Create test modal ─────────────────────────────────────────────────────────
 function openCreateModal() {
   document.getElementById('create-name').value = '';
+  document.getElementById('create-display-name').value = '';
+  document.getElementById('create-description').value = '';
   document.getElementById('create-code').value = '';
   document.getElementById('create-schedule').value = '24h';
   document.getElementById('create-error').classList.add('hidden');
@@ -725,6 +755,8 @@ async function createTest() {
     body: JSON.stringify({
       name,
       test_code: code,
+      display_name: document.getElementById('create-display-name').value.trim() || undefined,
+      description: document.getElementById('create-description').value.trim() || undefined,
       schedule: document.getElementById('create-schedule').value,
       credential: document.getElementById('create-credential').value || undefined,
     }),

@@ -29,6 +29,8 @@ export interface TestEntry {
   last_run_at?: string;
   enabled: boolean;
   schedule?: string;
+  name?: string;
+  description?: string;
 }
 
 export function listTests(input: ListTestsInput = {}): TestEntry[] {
@@ -55,6 +57,8 @@ export function listTests(input: ListTestsInput = {}): TestEntry[] {
       last_run_at: lastRun?.run_at,
       enabled: meta?.enabled ?? true,
       schedule: meta?.schedule,
+      name: meta?.name,
+      description: meta?.description,
     };
   });
 

@@ -75,11 +75,12 @@ export function getStatus(input: GetStatusInput = {}): string {
     const status = failure ? 'FAILING' : 'PASSING';
 
     const lines = [
-      `Test: ${filename}`,
+      `Test: ${meta?.name ? `${meta.name} (${filename})` : filename}`,
       `Status: ${status}`,
       `Last run: ${summary.run_at}`,
     ];
 
+    if (meta?.description) lines.push(`Description: ${meta.description}`);
     if (meta?.schedule) lines.push(`Schedule: every ${meta.schedule}`);
     if (meta?.tags?.length) lines.push(`Tags: ${meta.tags.join(', ')}`);
     if (meta?.enabled === false) lines.push('State: DISABLED');

@@ -9,6 +9,14 @@ import { readLastRun } from '../lib/results-store.js';
 export const createTestSchema = z.object({
   name: z.string().describe('Test file name without extension (e.g. "login-meuapp")'),
   test_code: z.string().describe('Full Playwright test code to write'),
+  display_name: z
+    .string()
+    .optional()
+    .describe('Human-readable name shown in the dashboard/list_tests (e.g. "Login — conta admin"). Falls back to the file name if omitted.'),
+  description: z
+    .string()
+    .optional()
+    .describe('What this test verifies, in plain language (e.g. "Confere que o admin loga e vê o dashboard carregar"). Shown wherever the test is listed.'),
   schedule: z
     .enum(['1h', '6h', '24h'])
     .optional()
@@ -62,10 +70,13 @@ export async function createTest(input: CreateTestInput, project?: string | null
         schedule: input.schedule ?? '24h',
         tags: input.tags ?? [],
         ...(input.credential ? { credential: input.credential } : {}),
+        ...(input.display_name ? { name: input.display_name } : {}),
+        ...(input.description ? { description: input.description } : {}),
         enabled: true,
       }, configDirFor(p));
 
       const parts = [`Test created and dry-run passed: ${finalPath}`];
+      if (input.display_name) parts.push(`Name: ${input.display_name}`);
       if (input.schedule) parts.push(`Schedule: every ${input.schedule}`);
       if (input.tags?.length) parts.push(`Tags: ${input.tags.join(', ')}`);
       return parts.join('\n');

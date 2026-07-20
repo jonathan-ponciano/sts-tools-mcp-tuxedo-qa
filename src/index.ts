@@ -165,7 +165,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               const status = t.enabled ? t.last_status.toUpperCase() : 'DISABLED';
               const schedule = t.schedule ? ` [${t.schedule}]` : '';
               const ran = t.last_run_at ? ` (last run: ${t.last_run_at})` : '';
-              return `[${status}]${schedule} ${t.file}${ran}`;
+              const label = t.name ? `${t.name} (${t.file})` : t.file;
+              const desc = t.description ? `\n    ${t.description}` : '';
+              return `[${status}]${schedule} ${label}${ran}${desc}`;
             })
             .join('\n');
         }

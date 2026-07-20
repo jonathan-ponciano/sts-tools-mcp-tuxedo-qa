@@ -16,7 +16,19 @@ export interface RunResult {
   output: string;
 }
 
-export async function runPlaywright(opts: RunOptions = {}): Promise<RunResult> {
+// Playwright writes a single shared results/last-run.json per invocation, so
+// overlapping runs (manual + scheduled, or two scheduled tests at once) would
+// race and corrupt each other's report. Serialize all runs through one queue.
+let queue: Promise<unknown> = Promise.resolve();
+
+export function runPlaywright(opts: RunOptions = {}): Promise<RunResult> {
+  const run = () => runPlaywrightNow(opts);
+  const result = queue.then(run, run);
+  queue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+async function runPlaywrightNow(opts: RunOptions = {}): Promise<RunResult> {
   mkdirSync(RESULTS_DIR, { recursive: true });
 
   const args = ['playwright', 'test'];

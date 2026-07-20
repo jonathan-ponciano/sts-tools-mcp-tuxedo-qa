@@ -17,6 +17,7 @@ import { readProtection, writeProtection } from './lib/protection-store.js';
 import { readStatusPage, writeStatusPage } from './lib/status-page-store.js';
 import { readHistory, computeUptime } from './lib/run-history.js';
 import { TESTS_DIR } from './lib/paths.js';
+import { startScheduler, getSchedulerState, nextRunAt } from './lib/scheduler.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DASHBOARD = join(__dirname, '..', 'dashboard', 'index.html');
@@ -54,6 +55,8 @@ app.get('/api/tests', (_req, res) => {
   const lastRun = readLastRun();
   const failedFiles = new Set((lastRun?.failures ?? []).map((f) => basename(f.file)));
 
+  const scheduler = getSchedulerState();
+
   const tests = files.map((filename) => {
     const m = meta[filename] ?? { enabled: true };
     const status = !m.enabled
@@ -63,10 +66,21 @@ app.get('/api/tests', (_req, res) => {
       : lastRun
       ? 'passing'
       : 'never_ran';
-    return { filename, status, ...m };
+    return {
+      filename,
+      status,
+      ...m,
+      next_run_at: nextRunAt(m as Parameters<typeof nextRunAt>[0]),
+      running: scheduler.running.includes(filename),
+    };
   });
 
   res.json({ tests });
+});
+
+// ── Scheduler / monitor ──────────────────────────────────────────────────────
+app.get('/api/scheduler', (_req, res) => {
+  res.json(getSchedulerState());
 });
 
 app.get('/api/tests/:name', (req, res) => {
@@ -275,4 +289,6 @@ function renderStatusPage({ name, tests, uptime, last60 }: {
 
 app.listen(PORT, () => {
   console.log(`\ntuxedo-qa dashboard → http://localhost:${PORT}\n`);
+  startScheduler();
+  console.log('Scheduler active — checks every minute for tests due to run.\n');
 });

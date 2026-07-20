@@ -37,14 +37,48 @@
 
   <!-- Tabs -->
   <div class="flex gap-6 border-b border-gray-200 mb-6 text-sm font-medium text-gray-500">
-    <button onclick="setTab('tests')"      id="tab-tests"      class="pb-2 tab-active">Testes</button>
+    <button onclick="setTab('monitor')"    id="tab-monitor"    class="pb-2 tab-active">Monitor</button>
+    <button onclick="setTab('tests')"      id="tab-tests"      class="pb-2">Testes</button>
     <button onclick="setTab('creds')"      id="tab-creds"      class="pb-2">Credenciais</button>
     <button onclick="setTab('protection')" id="tab-protection" class="pb-2">Proteção</button>
     <button onclick="setTab('statuspage')" id="tab-statuspage" class="pb-2">Status Page</button>
   </div>
 
+  <!-- ── MONITOR ── -->
+  <div id="panel-monitor">
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="bg-white border rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Scheduler</p>
+        <p id="mon-scheduler-state" class="text-lg font-semibold text-gray-400">—</p>
+        <p id="mon-scheduler-sub" class="text-xs text-gray-400 mt-0.5">&nbsp;</p>
+      </div>
+      <div class="bg-white border rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Uptime 30d</p>
+        <p id="mon-uptime" class="text-lg font-semibold text-gray-400">—</p>
+        <p class="text-xs text-gray-400 mt-0.5">últimas execuções</p>
+      </div>
+      <div class="bg-white border rounded-xl p-4">
+        <p class="text-xs text-gray-500 mb-1">Credenciais</p>
+        <p id="mon-creds-count" class="text-lg font-semibold text-gray-400">—</p>
+        <p class="text-xs text-gray-400 mt-0.5">configuradas</p>
+      </div>
+    </div>
+
+    <div class="bg-white border rounded-xl p-4 mb-4">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Histórico de execuções</p>
+      <div id="mon-history-bars" class="flex items-end gap-0.5 h-8"></div>
+      <p id="mon-history-empty" class="text-xs text-gray-400 hidden">Nenhuma execução registrada ainda.</p>
+    </div>
+
+    <div class="flex justify-between items-center mb-2">
+      <h2 class="text-sm font-semibold text-gray-700">Testes monitorados</h2>
+      <span class="text-xs text-gray-400">atualiza a cada 8s</span>
+    </div>
+    <div id="mon-tests-list" class="space-y-2"></div>
+  </div>
+
   <!-- ── TESTES ── -->
-  <div id="panel-tests">
+  <div id="panel-tests" class="hidden">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-sm font-semibold text-gray-700">Testes configurados</h2>
       <button onclick="openCreateModal()"
@@ -302,12 +336,13 @@ function setLoading(btnId, loading) {
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-const ALL_TABS = ['tests','creds','protection','statuspage'];
+const ALL_TABS = ['monitor','tests','creds','protection','statuspage'];
 function setTab(tab) {
   ALL_TABS.forEach(t => {
     document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`tab-${t}`).classList.toggle('tab-active', t === tab);
   });
+  if (tab === 'monitor')     { loadMonitor(); startMonitorPolling(); } else { stopMonitorPolling(); }
   if (tab === 'creds')       loadCreds();
   if (tab === 'protection')  loadProtection();
   if (tab === 'statuspage')  loadStatusPage();
@@ -341,11 +376,96 @@ function renderTests() {
       class="flex items-center justify-between bg-white border rounded-xl px-4 py-3 cursor-pointer hover:border-indigo-300 transition">
       <div class="flex items-center gap-3">
         <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
+        ${t.running ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">rodando</span>' : ''}
         <span class="text-sm font-medium">${t.filename}</span>
         ${t.credential ? `<span class="text-xs text-gray-400">🔑 ${t.credential}</span>` : ''}
         ${t.tags?.length ? `<span class="text-xs text-gray-400">${t.tags.join(', ')}</span>` : ''}
       </div>
-      <span class="text-xs text-gray-400">${t.schedule ?? '—'}</span>
+      <span class="text-xs text-gray-400">${t.schedule ?? '—'}${t.next_run_at ? ' · próx. ' + fmtRelative(t.next_run_at) : ''}</span>
+    </div>
+  `).join('');
+}
+
+// ── Monitor ───────────────────────────────────────────────────────────────────
+let _monitorPoll = null;
+
+function fmtRelative(iso) {
+  const diffMs = new Date(iso).getTime() - Date.now();
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin <= 0) return 'agora';
+  if (diffMin < 60) return `em ${diffMin}min`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `em ${diffH}h`;
+  return `em ${Math.round(diffH / 24)}d`;
+}
+
+function startMonitorPolling() {
+  stopMonitorPolling();
+  _monitorPoll = setInterval(loadMonitor, 8000);
+}
+function stopMonitorPolling() {
+  if (_monitorPoll) { clearInterval(_monitorPoll); _monitorPoll = null; }
+}
+
+async function loadMonitor() {
+  const [testsRes, historyRes, credsRes, schedulerRes] = await Promise.all([
+    fetch(`${API}/api/tests`).then(r => r.json()).catch(() => ({ tests: [] })),
+    fetch(`${API}/api/history`).then(r => r.json()).catch(() => ({ history: [], uptime: null })),
+    fetch(`${API}/api/credentials`).then(r => r.json()).catch(() => ({ credentials: [] })),
+    fetch(`${API}/api/scheduler`).then(r => r.json()).catch(() => ({ active: false, running: [] })),
+  ]);
+
+  _tests = testsRes.tests ?? [];
+
+  const schedulerEl = document.getElementById('mon-scheduler-state');
+  const schedulerSub = document.getElementById('mon-scheduler-sub');
+  schedulerEl.textContent = schedulerRes.active ? 'Ativo' : 'Inativo';
+  schedulerEl.className = `text-lg font-semibold ${schedulerRes.active ? 'text-green-600' : 'text-gray-400'}`;
+  schedulerSub.textContent = schedulerRes.active
+    ? (schedulerRes.running?.length ? `${schedulerRes.running.length} rodando agora` : 'nenhum rodando agora')
+    : 'inicie com "npm run dashboard"';
+
+  const uptimeEl = document.getElementById('mon-uptime');
+  uptimeEl.textContent = historyRes.uptime != null ? `${historyRes.uptime}%` : '—';
+  uptimeEl.className = `text-lg font-semibold ${historyRes.uptime == null ? 'text-gray-400' : historyRes.uptime >= 99 ? 'text-green-600' : historyRes.uptime >= 90 ? 'text-amber-500' : 'text-red-600'}`;
+
+  document.getElementById('mon-creds-count').textContent = credsRes.credentials?.length ?? 0;
+
+  renderHistoryBars(historyRes.history ?? []);
+  renderMonitorTests(_tests);
+}
+
+function renderHistoryBars(history) {
+  const el = document.getElementById('mon-history-bars');
+  const empty = document.getElementById('mon-history-empty');
+  if (!history.length) { el.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  el.innerHTML = [...history].reverse().map(e => {
+    const ok = e.failed === 0;
+    const when = new Date(e.run_at).toLocaleString('pt-BR', { hour12: false, dateStyle: 'short', timeStyle: 'short' });
+    return `<span title="${when} — ${ok ? 'ok' : e.failed + ' falha(s)'}" class="inline-block w-1.5 flex-1 max-w-[6px] rounded-sm ${ok ? 'bg-green-400' : 'bg-red-400'}" style="height:${ok ? '100%' : '60%'}"></span>`;
+  }).join('');
+}
+
+function renderMonitorTests(tests) {
+  const el = document.getElementById('mon-tests-list');
+  const scheduled = tests.filter(t => t.schedule && t.enabled !== false);
+  if (!scheduled.length) {
+    el.innerHTML = '<p class="text-sm text-gray-400">Nenhum teste com schedule ativo. Defina um schedule em "Testes" para monitorar automaticamente.</p>';
+    return;
+  }
+  el.innerHTML = scheduled.map(t => `
+    <div class="flex items-center justify-between bg-white border rounded-xl px-4 py-3">
+      <div class="flex items-center gap-3">
+        <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
+        ${t.running ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">rodando</span>' : ''}
+        <span class="text-sm font-medium">${t.filename}</span>
+        <span class="text-xs text-gray-400">a cada ${t.schedule}</span>
+      </div>
+      <div class="text-xs text-gray-400 text-right">
+        <div>${t.last_run_at ? 'último: ' + new Date(t.last_run_at).toLocaleString('pt-BR', { hour12: false, dateStyle: 'short', timeStyle: 'short' }) : 'nunca rodou'}</div>
+        ${t.next_run_at ? `<div>próximo: ${fmtRelative(t.next_run_at)}</div>` : ''}
+      </div>
     </div>
   `).join('');
 }
@@ -665,6 +785,8 @@ async function saveStatusPage() {
 (async () => {
   await loadCreds();
   await loadTests();
+  await loadMonitor();
+  startMonitorPolling();
 })();
 </script>
 </body>

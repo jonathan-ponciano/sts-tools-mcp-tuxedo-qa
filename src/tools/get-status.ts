@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { readLastRun, type TestFailure } from '../lib/results-store.js';
-import { getTestMeta } from '../lib/test-metadata.js';
+import { getAllMeta, getTestMeta } from '../lib/test-metadata.js';
+import { nextRunAt } from '../lib/scheduler.js';
 import { basename } from 'path';
 
 export const getStatusSchema = z.object({
@@ -109,6 +110,23 @@ export function getStatus(input: GetStatusInput = {}): string {
       lines.push(`    ${f.error.split('\n')[0]}`);
     }
     lines.push('', 'Tip: call get_status with test_name to get a fix suggestion per test.');
+  }
+
+  const meta = getAllMeta();
+  const nextRuns = Object.entries(meta)
+    .map(([file, m]) => ({ file, next: nextRunAt(m) }))
+    .filter((e): e is { file: string; next: string } => e.next !== null)
+    .sort((a, b) => a.next.localeCompare(b.next));
+
+  if (nextRuns.length > 0) {
+    const soonest = nextRuns[0];
+    const dueIn = Math.round((new Date(soonest.next).getTime() - Date.now()) / 60000);
+    lines.push(
+      '',
+      `Monitoring: ${nextRuns.length} test(s) on a schedule. Next due: ${basename(soonest.file)} ` +
+        (dueIn <= 0 ? '(due now — runs on the next scheduler check).' : `in ~${dueIn} min.`),
+      'Note: automatic runs only fire while the dashboard process (npm run dashboard) is running.',
+    );
   }
 
   return lines.join('\n');

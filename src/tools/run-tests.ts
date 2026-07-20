@@ -1,11 +1,11 @@
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { z } from 'zod';
 import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun } from '../lib/results-store.js';
 import { sendDiscordWebhook } from '../lib/discord-webhook.js';
-import { WEBHOOK_CONFIG } from '../lib/paths.js';
+import { TESTS_DIR, WEBHOOK_CONFIG } from '../lib/paths.js';
 import { isTestsPaused } from './pause-tests.js';
-import { getTestMeta } from '../lib/test-metadata.js';
+import { getTestMeta, upsertTestMeta } from '../lib/test-metadata.js';
 import { basename } from 'path';
 
 export const runTestsSchema = z.object({
@@ -59,6 +59,20 @@ function formatSummary(exitCode: number, output: string): string {
   return lines.join('\n');
 }
 
+// Stamp last_run_at on whichever test(s) this invocation covered, so the
+// scheduler knows when each one is next due.
+function markRan(testFile: string | undefined, ranAt: string): void {
+  if (testFile) {
+    const filename = basename(testFile.endsWith('.spec.ts') ? testFile : `${testFile}.spec.ts`);
+    upsertTestMeta(filename, { last_run_at: ranAt });
+    return;
+  }
+  if (!existsSync(TESTS_DIR)) return;
+  for (const file of readdirSync(TESTS_DIR).filter((f) => f.endsWith('.spec.ts'))) {
+    upsertTestMeta(file, { last_run_at: ranAt });
+  }
+}
+
 export async function runTests(input: RunTestsInput): Promise<string> {
   const pause = isTestsPaused();
   if (pause.paused) {
@@ -82,10 +96,11 @@ export async function runTests(input: RunTestsInput): Promise<string> {
 
   if (!waitForResult) {
     runPlaywright({ testFile: input.test_file, credentialLabel }).then(async ({ exitCode, output }) => {
-      const webhook = loadWebhookConfig();
-      if (!webhook) return;
       const summary = readLastRun();
-      if (!summary) return;
+      markRan(input.test_file, summary?.run_at ?? new Date().toISOString());
+
+      const webhook = loadWebhookConfig();
+      if (!webhook || !summary) return;
       const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
       if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});
     });
@@ -94,6 +109,7 @@ export async function runTests(input: RunTestsInput): Promise<string> {
 
   const { exitCode, output } = await runPlaywright({ testFile: input.test_file, credentialLabel });
   const summary = readLastRun();
+  markRan(input.test_file, summary?.run_at ?? new Date().toISOString());
 
   const webhook = loadWebhookConfig();
   if (webhook && summary) {

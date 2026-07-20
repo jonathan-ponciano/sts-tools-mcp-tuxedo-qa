@@ -1,7 +1,7 @@
 import express from 'express';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, mkdirSync, rmSync } from 'fs';
 
 import { createTest } from './tools/create-test.js';
 import { updateTest } from './tools/update-test.js';
@@ -9,18 +9,22 @@ import { deleteTest } from './tools/delete-test.js';
 import { runTests } from './tools/run-tests.js';
 import { createCredential } from './tools/create-credential.js';
 import { deleteCredential } from './tools/delete-credential.js';
+import { setWebhook } from './tools/set-webhook.js';
 
 import { readLastRun } from './lib/results-store.js';
 import { getAllMeta, getTestMeta } from './lib/test-metadata.js';
 import { readCredentials, maskValue } from './lib/credentials-store.js';
 import { readProtection, writeProtection } from './lib/protection-store.js';
 import { readStatusPage, writeStatusPage } from './lib/status-page-store.js';
+import { readWebhook } from './lib/webhook-store.js';
 import { readHistory, computeUptime } from './lib/run-history.js';
 import {
   listProjectSlugs,
   hasDefaultProjectData,
+  namespaceFor,
   testsDirFor,
   configDirFor,
+  resultsDirFor,
   lastRunFor,
 } from './lib/paths.js';
 import { startScheduler, getSchedulerState, nextRunAt } from './lib/scheduler.js';
@@ -78,6 +82,55 @@ app.get('/api/projects', (_req, res) => {
   });
 
   res.json({ projects });
+});
+
+// Prepares an empty project namespace so it appears in the dashboard and can
+// be managed (tests, credentials, schedule) right away — from here alone,
+// with no MCP connection required. Registering an actual MCP connection for
+// it (so it can be driven from a chat) is a separate, CLI-level step:
+// TUXEDO_QA_PROJECT=<slug> bash install.sh.
+app.post('/api/projects', (req, res) => {
+  const { slug } = req.body as { slug?: string };
+  if (!slug || !/^[a-zA-Z0-9_-]+$/.test(slug)) {
+    return res.status(400).json({ error: 'Slug inválido — use apenas letras, números, "-" ou "_".' });
+  }
+  if (listProjectSlugs().includes(slug)) {
+    return res.status(400).json({ error: `Projeto "${slug}" já existe.` });
+  }
+  mkdirSync(testsDirFor(slug), { recursive: true });
+  mkdirSync(configDirFor(slug), { recursive: true });
+  mkdirSync(resultsDirFor(slug), { recursive: true });
+  res.json({ message: `Projeto "${slug}" criado.` });
+});
+
+// Irreversible — deletes every test/credential/history for that project.
+// Does not touch any MCP registration; remove that separately with
+// `claude mcp remove tuxedoqa-<slug>` (or the Gemini CLI equivalent) if
+// you no longer want the connection either.
+app.delete('/api/projects/:slug', (req, res) => {
+  const { slug } = req.params;
+  if (!listProjectSlugs().includes(slug)) {
+    return res.status(404).json({ error: `Projeto "${slug}" não encontrado.` });
+  }
+  rmSync(namespaceFor(slug), { recursive: true, force: true });
+  res.json({ message: `Projeto "${slug}" e todos os seus dados foram apagados.` });
+});
+
+// ── Webhook ───────────────────────────────────────────────────────────────────
+app.get('/api/webhook', (req, res) => {
+  const webhook = readWebhook(configDirFor(projectFrom(req)));
+  if (!webhook) return res.json({ url: null, events: 'failure' });
+  res.json({ url: maskValue(webhook.url), events: webhook.events });
+});
+
+app.put('/api/webhook', (req, res) => {
+  try {
+    const { url, events } = req.body as { url: string; events?: 'failure' | 'all' };
+    const result = setWebhook({ url, events: events ?? 'failure' }, projectFrom(req));
+    res.json({ message: result });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
 });
 
 // ── Status ─────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join, basename } from 'path';
+import { existsSync, readdirSync } from 'fs';
+import { basename } from 'path';
 import {
   listProjectSlugs,
   hasDefaultProjectData,
@@ -11,8 +11,8 @@ import { getAllMeta, upsertTestMeta, type TestMeta } from './test-metadata.js';
 import { isTestsPaused } from '../tools/pause-tests.js';
 import { runPlaywright } from './playwright-runner.js';
 import { readLastRun } from './results-store.js';
-import { appendHistory } from './run-history.js';
 import { sendDiscordWebhook } from './discord-webhook.js';
+import { readWebhook } from './webhook-store.js';
 
 const SCHEDULE_MS: Record<NonNullable<TestMeta['schedule']>, number> = {
   '1h': 60 * 60 * 1000,
@@ -47,17 +47,6 @@ function isRunning(project: string | null, file: string): boolean {
   return running.some((r) => r.project === project && r.file === file);
 }
 
-interface WebhookConfig {
-  url: string;
-  events: 'failure' | 'all';
-}
-
-function loadWebhookConfig(configDir: string): WebhookConfig | null {
-  const file = join(configDir, 'webhook.json');
-  if (!existsSync(file)) return null;
-  return JSON.parse(readFileSync(file, 'utf-8')) as WebhookConfig;
-}
-
 // Every project ever created, whether under projects/<slug>/ or the
 // unnamespaced install root (single-project installs, unaffected by
 // TUXEDO_QA_PROJECT). `null` represents that unnamespaced default project.
@@ -76,7 +65,7 @@ async function runDueTest(project: string | null, file: string): Promise<void> {
     const summary = readLastRun(lastRunFor(project));
     upsertTestMeta(file, { last_run_at: summary?.run_at ?? new Date().toISOString() }, configDir);
 
-    const webhook = loadWebhookConfig(configDir);
+    const webhook = readWebhook(configDir);
     if (webhook && summary) {
       const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
       if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});

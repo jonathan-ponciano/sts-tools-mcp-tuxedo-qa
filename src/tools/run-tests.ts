@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join, basename } from 'path';
+import { existsSync, readdirSync } from 'fs';
+import { basename } from 'path';
 import { z } from 'zod';
 import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun } from '../lib/results-store.js';
 import { sendDiscordWebhook } from '../lib/discord-webhook.js';
+import { readWebhook } from '../lib/webhook-store.js';
 import { testsDirFor, configDirFor, lastRunFor, CURRENT_PROJECT } from '../lib/paths.js';
 import { isTestsPaused } from './pause-tests.js';
 import { getTestMeta, upsertTestMeta } from '../lib/test-metadata.js';
@@ -20,17 +21,6 @@ export const runTestsSchema = z.object({
 });
 
 export type RunTestsInput = z.infer<typeof runTestsSchema>;
-
-interface WebhookConfig {
-  url: string;
-  events: 'failure' | 'all';
-}
-
-function loadWebhookConfig(configDir: string): WebhookConfig | null {
-  const file = join(configDir, 'webhook.json');
-  if (!existsSync(file)) return null;
-  return JSON.parse(readFileSync(file, 'utf-8')) as WebhookConfig;
-}
 
 function isTestEnabled(testFile: string | undefined, configDir: string): { enabled: boolean; file?: string } {
   if (!testFile) return { enabled: true };
@@ -108,7 +98,7 @@ export async function runTests(input: RunTestsInput, project?: string | null): P
       markRan(input.test_file, summary?.run_at ?? new Date().toISOString(), testsDir, configDir);
       void exitCode; void output;
 
-      const webhook = loadWebhookConfig(configDir);
+      const webhook = readWebhook(configDir);
       if (!webhook || !summary) return;
       const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
       if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});
@@ -120,7 +110,7 @@ export async function runTests(input: RunTestsInput, project?: string | null): P
   const summary = readLastRun(lastRunPath);
   markRan(input.test_file, summary?.run_at ?? new Date().toISOString(), testsDir, configDir);
 
-  const webhook = loadWebhookConfig(configDir);
+  const webhook = readWebhook(configDir);
   if (webhook && summary) {
     const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
     if (shouldNotify) {

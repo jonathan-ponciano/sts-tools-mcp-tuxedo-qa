@@ -46,13 +46,17 @@
     <button onclick="setTab('creds')"      id="tab-creds"      class="pb-2">Credenciais</button>
     <button onclick="setTab('protection')" id="tab-protection" class="pb-2">Proteção</button>
     <button onclick="setTab('statuspage')" id="tab-statuspage" class="pb-2">Status Page</button>
+    <button onclick="setTab('webhook')"    id="tab-webhook"    class="pb-2">Webhook</button>
   </div>
 
   <!-- ── MONITOR ── -->
   <div id="panel-monitor">
     <div class="flex justify-between items-center mb-2">
       <h2 class="text-sm font-semibold text-gray-700">Todos os projetos</h2>
-      <span class="text-xs text-gray-400">selecione um acima para gerenciar</span>
+      <button onclick="openNewProjectModal()"
+        class="px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition">
+        + Novo projeto
+      </button>
     </div>
     <div id="mon-projects-list" class="space-y-1.5 mb-5"></div>
 
@@ -152,6 +156,29 @@
       </div>
       <div class="flex justify-end">
         <button onclick="saveStatusPage()" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WEBHOOK ── -->
+  <div id="panel-webhook" class="hidden">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Notificações via webhook (Discord)</h2>
+    <p class="text-xs text-gray-500 mb-4">Toda execução notifica automaticamente esse webhook, com print da falha anexado quando houver.</p>
+    <div class="bg-white border rounded-xl p-5 space-y-4 max-w-lg">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">URL do webhook do Discord</label>
+        <input id="wh-url" type="text" placeholder="https://discord.com/api/webhooks/..." class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        <p id="wh-current" class="text-xs text-gray-400 mt-1"></p>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Notificar em</label>
+        <select id="wh-events" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+          <option value="failure">Só quando falhar</option>
+          <option value="all">Toda execução</option>
+        </select>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="saveWebhook()" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
       </div>
     </div>
   </div>
@@ -314,6 +341,31 @@
   </div>
 </div>
 
+<!-- ── MODAL: novo projeto ── -->
+<div id="modal-newproject" class="fixed inset-0 bg-black/40 z-50 hidden flex items-start justify-center pt-10 px-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 class="font-semibold text-gray-900">Novo projeto</h3>
+      <button onclick="closeModal('modal-newproject')" class="text-gray-400 hover:text-gray-600 text-lg">×</button>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Slug (letras, números, - ou _)</label>
+        <input id="newproject-slug" type="text" placeholder="fretebras"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <p class="text-xs text-gray-400">Isso só cria o espaço de dados (testes/credenciais/histórico isolados). Pra conectar via chat, registre o MCP também: <code class="bg-gray-100 px-1 rounded">TUXEDO_QA_PROJECT=&lt;slug&gt; bash install.sh</code></p>
+      <p id="newproject-error" class="text-xs text-red-600 hidden"></p>
+    </div>
+    <div class="px-5 py-3 border-t flex justify-end">
+      <button onclick="createProject()"
+        class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        Criar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Toast ── -->
 <div id="toast" class="fixed bottom-5 right-5 z-50 hidden">
   <div id="toast-msg" class="bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg max-w-xs"></div>
@@ -394,7 +446,7 @@ function setLoading(btnId, loading) {
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-const ALL_TABS = ['monitor','tests','creds','protection','statuspage'];
+const ALL_TABS = ['monitor','tests','creds','protection','statuspage','webhook'];
 function setTab(tab) {
   ALL_TABS.forEach(t => {
     document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
@@ -404,6 +456,7 @@ function setTab(tab) {
   if (tab === 'creds')       loadCreds();
   if (tab === 'protection')  loadProtection();
   if (tab === 'statuspage')  loadStatusPage();
+  if (tab === 'webhook')     loadWebhook();
 }
 
 // ── Status bar ────────────────────────────────────────────────────────────────
@@ -556,7 +609,10 @@ function renderProjectsOverview(schedulerRes) {
         ${running ? `<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">${running} rodando</span>` : ''}
         <span class="text-xs text-gray-400">${p.testCount} teste(s)</span>
       </div>
-      <span class="text-xs text-gray-400">uptime 30d: ${p.uptime}%</span>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-gray-400">uptime 30d: ${p.uptime}%</span>
+        ${p.project ? `<button onclick="event.stopPropagation(); deleteProject('${p.project}', '${p.label}')" class="text-xs text-red-400 hover:text-red-600">Excluir</button>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -878,6 +934,57 @@ async function saveStatusPage() {
   }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
   updateSpUrl(slug, _spEnabled);
+}
+
+// ── Webhook ───────────────────────────────────────────────────────────────────
+async function loadWebhook() {
+  const r = await apiFetch(`/api/webhook`).then(r => r.json()).catch(() => ({ url: null, events: 'failure' }));
+  document.getElementById('wh-url').value = '';
+  document.getElementById('wh-events').value = r.events ?? 'failure';
+  const current = document.getElementById('wh-current');
+  current.textContent = r.url ? `Configurado: ${r.url} — preencha o campo acima só se quiser trocar.` : 'Nenhum webhook configurado ainda.';
+}
+
+async function saveWebhook() {
+  const url = document.getElementById('wh-url').value.trim();
+  const events = document.getElementById('wh-events').value;
+  if (!url) { toast('Cole a URL do webhook pra salvar.', true); return; }
+  const r = await apiFetch(`/api/webhook`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, events }),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (!r.error) loadWebhook();
+}
+
+// ── Project management ────────────────────────────────────────────────────────
+function openNewProjectModal() {
+  document.getElementById('newproject-slug').value = '';
+  document.getElementById('newproject-error').classList.add('hidden');
+  document.getElementById('modal-newproject').classList.remove('hidden');
+}
+
+async function createProject() {
+  const slug = document.getElementById('newproject-slug').value.trim();
+  const errEl = document.getElementById('newproject-error');
+  const r = await fetch(`${API}/api/projects`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug }),
+  }).then(r => r.json());
+  if (r.error) { errEl.textContent = r.error; errEl.classList.remove('hidden'); return; }
+  toast(r.message);
+  closeModal('modal-newproject');
+  await loadProjects();
+  selectProject(slug);
+}
+
+async function deleteProject(slug, label) {
+  if (!confirm(`Apagar o projeto "${label}" e TODOS os seus dados (testes, credenciais, histórico)? Isso não afeta nenhuma conexão MCP registrada — remova com "claude mcp remove" separadamente se quiser.`)) return;
+  const r = await fetch(`${API}/api/projects/${encodeURIComponent(slug)}`, { method: 'DELETE' }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (_currentProject === slug) _currentProject = null;
+  await loadProjects();
+  await loadMonitor();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

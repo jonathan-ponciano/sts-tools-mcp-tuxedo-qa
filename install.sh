@@ -103,11 +103,10 @@ ok "tuxedo-qa instalado em $INSTALL_DIR"
 echo ""
 echo "Próximos passos:"
 echo "  1. Reinicie/reconecte sua CLI de IA pra carregar o servidor MCP novo."
-if [ -n "$PROJECT" ]; then
-  echo "  2. (Opcional) inicie o dashboard deste projeto (use uma PORT diferente por projeto):"
-  echo "       cd \"$INSTALL_DIR\" && TUXEDO_QA_PROJECT=$PROJECT PORT=3131 npm run dashboard"
-else
-  echo "  2. (Opcional) inicie o dashboard de monitoramento:"
-  echo "       cd \"$INSTALL_DIR\" && npm run dashboard"
-fi
+echo "  2. (Opcional) inicie o dashboard — um só, mesmo com vários projetos registrados,"
+echo "     ele já mostra todos com um seletor pra trocar de contexto:"
+echo "       cd \"$INSTALL_DIR\" && npm run dashboard"
 echo "  3. Peça ao seu agente pra criar o primeiro teste."
+if [ -n "$PROJECT" ]; then
+  echo "  4. Pra registrar outro projeto depois: TUXEDO_QA_PROJECT=<outro-slug> bash install.sh"
+fi

@@ -112,6 +112,7 @@
       <a href="#use-cases">Casos de uso</a>
       <a href="#tools">Ferramentas MCP</a>
       <a href="#quickstart">Como começar</a>
+      <a href="#multi-project">Múltiplos projetos</a>
       <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">GitHub</a>
     </div>
   </div>
@@ -284,10 +285,7 @@ npm install && npm run build</code></pre>
       <div class="step">
         <div class="step-body">
           <h3>Monitorando mais de um app/cliente?</h3>
-          <p>Uma instalação só serve vários projetos isolados — cada um com seus próprios testes, credenciais e histórico. Rode o instalador de novo com um slug diferente por projeto:</p>
-          <pre><code>TUXEDO_QA_PROJECT=cliente-a bash install.sh
-TUXEDO_QA_PROJECT=cliente-b bash install.sh</code></pre>
-          <p>Isso registra <code>tuxedoqa-cliente-a</code> e <code>tuxedoqa-cliente-b</code> como servidores MCP separados. Sem essa variável, tudo roda no modo padrão (um projeto só).</p>
+          <p>Uma instalação só serve vários projetos isolados, com um dashboard só pra ver todos — veja a <a href="#multi-project">seção detalhada abaixo</a>.</p>
         </div>
       </div>
       <div class="step">
@@ -304,6 +302,65 @@ TUXEDO_QA_PROJECT=cliente-b bash install.sh</code></pre>
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<section id="multi-project">
+  <div class="wrap">
+    <h2>Múltiplos projetos, um dashboard só</h2>
+    <p class="section-sub">Uma instalação do tuxedo-qa serve quantos apps/clientes você quiser — cada um completamente isolado, todos visíveis num dashboard único.</p>
+
+    <div class="grid" style="margin-bottom:32px">
+      <div class="card">
+        <span class="icon">🔌</span>
+        <h3>Uma conexão MCP por projeto</h3>
+        <p>Cada projeto tem seu próprio servidor MCP registrado (ex: <code>tuxedoqa-fretebras</code>). O Claude/Gemini conectado ali só enxerga e mexe nos testes daquele projeto — impossível misturar com outro por acidente.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🗂️</span>
+        <h3>Dados isolados de verdade</h3>
+        <p>Testes, credenciais, schedule e histórico de cada projeto ficam em <code>projects/&lt;slug&gt;/</code>, separados fisicamente dentro da instalação. Nada é compartilhado entre projetos.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📊</span>
+        <h3>Um dashboard vê todos</h3>
+        <p>O dashboard não pertence a nenhum projeto específico — ele lista todos com um seletor pra trocar de contexto, e o scheduler monitora todos ao mesmo tempo, cada um no seu próprio horário.</p>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-body">
+          <h3>Registrar um novo projeto</h3>
+          <p>Rode o instalador de novo passando um slug — ele reaproveita a mesma instalação, só registra uma nova conexão MCP:</p>
+          <pre><code>TUXEDO_QA_PROJECT=fretebras bash install.sh
+TUXEDO_QA_PROJECT=xtagger bash install.sh</code></pre>
+          <p>Isso registra <code>tuxedoqa-fretebras</code> e <code>tuxedoqa-xtagger</code> como servidores MCP separados, cada um isolado em <code>projects/fretebras/</code> e <code>projects/xtagger/</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>Usar cada projeto pelo Claude/Gemini</h3>
+          <p>Escolha a conexão MCP certa pra cada conversa — <code>tuxedoqa-fretebras</code> quando o assunto for o Fretebras, <code>tuxedoqa-xtagger</code> pro xtagger. Cada uma só vê o próprio projeto.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>Ver e gerenciar tudo num dashboard só</h3>
+          <p>Suba o dashboard uma vez (sem precisar de <code>TUXEDO_QA_PROJECT</code> nenhum):</p>
+          <pre><code>npm run dashboard</code></pre>
+          <p>A aba Monitor mostra todos os projetos juntos (testes, uptime, o que tá rodando agora). Clicar num projeto ali — ou no seletor no topo — troca o contexto do resto do dashboard pra aquele projeto.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>Monitoramento automático, por projeto</h3>
+          <p>O scheduler roda dentro do dashboard e verifica <strong>todos os projetos a cada minuto</strong>. Se um tem teste agendado a cada 1h e outro a cada 6h, cada um roda no seu próprio horário, de forma independente — enquanto o dashboard estiver de pé.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-sub" style="margin-top:24px">Sem <code>TUXEDO_QA_PROJECT</code>, tudo funciona no modo padrão — um projeto só, sem namespace, exatamente como antes.</p>
   </div>
 </section>
 

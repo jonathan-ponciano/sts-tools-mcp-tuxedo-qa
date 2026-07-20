@@ -63,26 +63,69 @@ npm run dashboard
 
 ## Monitorando mais de um app/cliente
 
-Tests, credenciais e config ficam salvos dentro da própria instalação — se você usa o
-tuxedo-qa pra mais de um projeto, use `TUXEDO_QA_PROJECT` pra isolar cada um (uma
-instalação só, vários projetos separados, cada um com seus próprios testes/credenciais/
-histórico):
+Uma instalação só do tuxedo-qa serve quantos projetos você quiser, cada um **completamente
+isolado** (testes, credenciais, schedule, histórico próprios), com **um dashboard só** pra
+ver e gerenciar todos eles juntos. A ideia:
+
+- Cada projeto tem sua própria conexão MCP (o Claude/Gemini "conectado" naquele projeto
+  específico só enxerga e mexe nos testes daquele projeto).
+- O dashboard (`npm run dashboard`) não pertence a nenhum projeto — ele enxerga todos ao
+  mesmo tempo, com um seletor pra trocar de contexto.
+- O scheduler (monitoramento automático) roda dentro do dashboard e cuida de **todos os
+  projetos ao mesmo tempo**, cada um no seu próprio horário.
+
+### 1. Registrar um novo projeto
+
+Rode o instalador de novo, passando um slug em `TUXEDO_QA_PROJECT` (letras, números, `-`/`_`).
+Ele reaproveita a mesma instalação (mesmo clone, mesmo `node_modules`) e só registra uma nova
+conexão MCP:
 
 ```bash
-TUXEDO_QA_PROJECT=cliente-a bash install.sh   # registra "tuxedoqa-cliente-a"
-TUXEDO_QA_PROJECT=cliente-b bash install.sh   # registra "tuxedoqa-cliente-b"
+TUXEDO_QA_PROJECT=fretebras bash install.sh
+# → registra o servidor MCP "tuxedoqa-fretebras"
+
+TUXEDO_QA_PROJECT=xtagger bash install.sh
+# → registra o servidor MCP "tuxedoqa-xtagger"
 ```
 
-Cada um vira um servidor MCP com nome próprio, completamente isolado (`projects/cliente-a/`,
-`projects/cliente-b/`). Pra rodar o dashboard de um projeto específico:
+Repita pra cada projeto/cliente novo. Os dados de cada um ficam isolados em
+`projects/<slug>/` dentro da instalação (`~/tuxedo-qa/projects/fretebras/`,
+`~/tuxedo-qa/projects/xtagger/`, etc.) — testes, credenciais, schedule e histórico
+nunca se misturam entre projetos.
+
+### 2. Usar cada projeto pelo Claude/Gemini
+
+Depois de registrado, abra uma conversa e escolha a conexão MCP certa pra cada projeto
+(`tuxedoqa-fretebras` quando estiver falando sobre o Fretebras, `tuxedoqa-xtagger` pro
+xtagger). Cada uma só cria/roda/lê testes do seu próprio projeto — não tem como um
+misturar com o outro por acidente.
+
+### 3. Ver tudo junto no dashboard
+
+Suba o dashboard uma vez só (ele não precisa de `TUXEDO_QA_PROJECT` nenhum — enxerga todos
+sozinho):
 
 ```bash
-TUXEDO_QA_PROJECT=cliente-a PORT=3131 npm run dashboard
-TUXEDO_QA_PROJECT=cliente-b PORT=3132 npm run dashboard   # porta diferente por projeto
+npm run dashboard
+# → http://localhost:3131
 ```
 
-Sem `TUXEDO_QA_PROJECT`, tudo cai no modo padrão (um projeto só, sem namespace) — não muda
-nada pra quem usa só um app.
+Na aba **Monitor** tem uma visão geral com todos os projetos (quantos testes, uptime,
+o que tá rodando agora). Clicar num projeto ali — ou usar o seletor no topo da página —
+troca o contexto do resto do dashboard (abas Testes, Credenciais, Proteção, Status Page)
+pra aquele projeto específico. É o mesmo dashboard, só muda o que ele mostra.
+
+### 4. Monitoramento automático
+
+O scheduler roda dentro do processo do dashboard e verifica **todos os projetos a cada
+minuto** — não importa qual está selecionado na tela no momento. Se `fretebras` tem um
+teste agendado a cada 1h e `xtagger` tem um a cada 6h, os dois rodam nos seus próprios
+horários, de forma independente, enquanto o dashboard estiver de pé.
+
+### Sem `TUXEDO_QA_PROJECT`
+
+Se você só tem um projeto, não precisa mexer em nada disso — sem essa variável, tudo
+funciona no modo padrão (um projeto só, sem namespace), exatamente como antes.
 
 ## Desenvolvimento
 

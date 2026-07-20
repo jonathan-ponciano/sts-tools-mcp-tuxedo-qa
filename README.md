@@ -20,6 +20,19 @@ na landing page.
 
 ## Como começar
 
+Instalador de um comando só — clona/atualiza, builda, e registra automaticamente
+no Claude Code e/ou Gemini CLI (o que você tiver instalado):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/install.sh | bash
+```
+
+Instala em `~/tuxedo-qa` por padrão (mude com `TUXEDO_QA_DIR=/outro/caminho`). Rodar de
+novo atualiza a instalação existente — seguro de repetir.
+
+<details>
+<summary>Instalação manual</summary>
+
 ```bash
 git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
 cd sts-tools-mcp-tuxedo-qa
@@ -27,17 +40,19 @@ npm install
 npm run build
 ```
 
-Registre como servidor MCP. No Claude Code:
+Registre como servidor MCP. No Claude Code (escopo `user` = disponível em todos os projetos):
 
 ```bash
-claude mcp add tuxedoqa -- node "$(pwd)/dist/index.js"
+claude mcp add tuxedoqa --scope user -- node "$(pwd)/dist/index.js"
 ```
 
-No Gemini CLI:
+No Gemini CLI (sem `--` antes do comando — sintaxe diferente do Claude Code):
 
 ```bash
-gemini mcp add tuxedoqa -- node "$(pwd)/dist/index.js"
+gemini mcp add tuxedoqa node "$(pwd)/dist/index.js" --scope user
 ```
+
+</details>
 
 Opcionalmente, inicie o dashboard local:
 

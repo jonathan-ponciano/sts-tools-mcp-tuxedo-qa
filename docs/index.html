@@ -256,20 +256,22 @@
     <div class="steps">
       <div class="step">
         <div class="step-body">
-          <h3>Clonar e instalar</h3>
-          <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
-cd sts-tools-mcp-tuxedo-qa
-npm install
-npm run build</code></pre>
+          <h3>Instalar</h3>
+          <p>Um comando só — clona, builda e registra no Claude Code e/ou Gemini CLI automaticamente:</p>
+          <pre><code>curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/install.sh | bash</code></pre>
+          <p>Instala em <code>~/tuxedo-qa</code> (mude com <code>TUXEDO_QA_DIR=/outro/caminho</code>). Rodar de novo atualiza — seguro de repetir.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Registrar como servidor MCP</h3>
-          <p>Funciona com qualquer cliente compatível com MCP. Por exemplo, no Claude Code:</p>
-          <pre><code>claude mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
-          <p>Ou no Gemini CLI:</p>
-          <pre><code>gemini mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
+          <h3>Prefere manual?</h3>
+          <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
+cd sts-tools-mcp-tuxedo-qa
+npm install && npm run build</code></pre>
+          <p>Claude Code:</p>
+          <pre><code>claude mcp add tuxedoqa --scope user -- node "$(pwd)/dist/index.js"</code></pre>
+          <p>Gemini CLI (sem <code>--</code> antes do comando):</p>
+          <pre><code>gemini mcp add tuxedoqa node "$(pwd)/dist/index.js" --scope user</code></pre>
         </div>
       </div>
       <div class="step">

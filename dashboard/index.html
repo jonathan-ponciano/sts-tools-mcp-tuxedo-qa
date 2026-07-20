@@ -25,6 +25,10 @@
     <div class="flex items-center gap-3">
       <span class="text-2xl font-bold tracking-tight text-indigo-600">tuxedo-qa</span>
       <span class="text-sm text-gray-400">QA monitor</span>
+      <select id="project-select" onchange="onProjectChange()"
+        class="text-xs border rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <option value="">padrão</option>
+      </select>
     </div>
     <div id="status-bar" class="flex items-center gap-4 text-sm text-gray-500">
       <span id="status-summary">carregando...</span>
@@ -46,6 +50,12 @@
 
   <!-- ── MONITOR ── -->
   <div id="panel-monitor">
+    <div class="flex justify-between items-center mb-2">
+      <h2 class="text-sm font-semibold text-gray-700">Todos os projetos</h2>
+      <span class="text-xs text-gray-400">selecione um acima para gerenciar</span>
+    </div>
+    <div id="mon-projects-list" class="space-y-1.5 mb-5"></div>
+
     <div class="grid grid-cols-3 gap-3 mb-4">
       <div class="bg-white border rounded-xl p-4">
         <p class="text-xs text-gray-500 mb-1">Scheduler</p>
@@ -314,6 +324,54 @@ const API = 'http://localhost:3131';
 let _tests = [];
 let _creds = [];
 let _currentTest = null;
+let _currentProject = null; // slug string, or null for the unnamespaced "padrão" project
+let _projects = [];
+
+// ── Multi-project ─────────────────────────────────────────────────────────────
+// Every request says which project it's about, so one dashboard can manage
+// several isolated projects (each with its own MCP connection/tests/creds).
+function apiFetch(path, opts = {}) {
+  const sep = path.includes('?') ? '&' : '?';
+  const url = _currentProject ? `${API}${path}${sep}project=${encodeURIComponent(_currentProject)}` : `${API}${path}`;
+  if (opts.body && _currentProject) {
+    try {
+      const body = JSON.parse(opts.body);
+      body.project = _currentProject;
+      opts = { ...opts, body: JSON.stringify(body) };
+    } catch { /* body wasn't JSON, leave it alone */ }
+  }
+  return fetch(url, opts);
+}
+
+async function loadProjects() {
+  const r = await apiFetch(`/api/projects`).then(r => r.json()).catch(() => ({ projects: [] }));
+  _projects = r.projects ?? [];
+  renderProjectSelect();
+}
+
+function renderProjectSelect() {
+  const sel = document.getElementById('project-select');
+  if (!_projects.length) {
+    sel.innerHTML = '<option value="">padrão</option>';
+    return;
+  }
+  sel.innerHTML = _projects.map(p =>
+    `<option value="${p.project ?? ''}" ${p.project === _currentProject ? 'selected' : ''}>${p.label} (${p.testCount})</option>`
+  ).join('');
+  // keep _currentProject valid — if it no longer exists, fall back to the first one
+  if (!_projects.some(p => p.project === _currentProject)) {
+    _currentProject = _projects[0].project;
+    sel.value = _currentProject ?? '';
+  }
+}
+
+function onProjectChange() {
+  const sel = document.getElementById('project-select');
+  _currentProject = sel.value || null;
+  loadCreds();
+  loadTests();
+  loadMonitor();
+}
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function toast(msg, err = false) {
@@ -350,7 +408,7 @@ function setTab(tab) {
 
 // ── Status bar ────────────────────────────────────────────────────────────────
 async function loadStatus() {
-  const r = await fetch(`${API}/api/status`).then(r => r.json()).catch(() => ({}));
+  const r = await apiFetch(`/api/status`).then(r => r.json()).catch(() => ({}));
   const lr = r.lastRun;
   if (!lr) { document.getElementById('status-summary').textContent = 'nenhum run ainda'; return; }
   const d = new Date(lr.run_at);
@@ -362,7 +420,7 @@ async function loadStatus() {
 
 // ── Tests list ────────────────────────────────────────────────────────────────
 async function loadTests() {
-  const r = await fetch(`${API}/api/tests`).then(r => r.json()).catch(() => ({ tests: [] }));
+  const r = await apiFetch(`/api/tests`).then(r => r.json()).catch(() => ({ tests: [] }));
   _tests = r.tests ?? [];
   renderTests();
   loadStatus();
@@ -408,14 +466,18 @@ function stopMonitorPolling() {
 }
 
 async function loadMonitor() {
-  const [testsRes, historyRes, credsRes, schedulerRes] = await Promise.all([
-    fetch(`${API}/api/tests`).then(r => r.json()).catch(() => ({ tests: [] })),
-    fetch(`${API}/api/history`).then(r => r.json()).catch(() => ({ history: [], uptime: null })),
-    fetch(`${API}/api/credentials`).then(r => r.json()).catch(() => ({ credentials: [] })),
-    fetch(`${API}/api/scheduler`).then(r => r.json()).catch(() => ({ active: false, running: [] })),
+  const [testsRes, historyRes, credsRes, schedulerRes, projectsRes] = await Promise.all([
+    apiFetch(`/api/tests`).then(r => r.json()).catch(() => ({ tests: [] })),
+    apiFetch(`/api/history`).then(r => r.json()).catch(() => ({ history: [], uptime: null })),
+    apiFetch(`/api/credentials`).then(r => r.json()).catch(() => ({ credentials: [] })),
+    apiFetch(`/api/scheduler`).then(r => r.json()).catch(() => ({ active: false, running: [] })),
+    apiFetch(`/api/projects`).then(r => r.json()).catch(() => ({ projects: [] })),
   ]);
 
   _tests = testsRes.tests ?? [];
+  _projects = projectsRes.projects ?? [];
+  renderProjectSelect();
+  renderProjectsOverview(schedulerRes);
 
   const schedulerEl = document.getElementById('mon-scheduler-state');
   const schedulerSub = document.getElementById('mon-scheduler-sub');
@@ -470,9 +532,46 @@ function renderMonitorTests(tests) {
   `).join('');
 }
 
+function renderProjectsOverview(schedulerRes) {
+  const el = document.getElementById('mon-projects-list');
+  if (!_projects.length) {
+    el.innerHTML = '<p class="text-sm text-gray-400">Nenhum projeto ainda.</p>';
+    return;
+  }
+  const runningByProject = {};
+  (schedulerRes?.running ?? []).forEach(r => {
+    const key = r.project ?? '';
+    runningByProject[key] = (runningByProject[key] ?? 0) + 1;
+  });
+
+  el.innerHTML = _projects.map(p => {
+    const key = p.project ?? '';
+    const isCurrent = p.project === _currentProject;
+    const running = runningByProject[key] ?? 0;
+    return `
+    <div onclick="selectProject(${p.project ? `'${p.project}'` : 'null'})"
+      class="flex items-center justify-between border rounded-xl px-4 py-2.5 cursor-pointer transition ${isCurrent ? 'bg-indigo-50 border-indigo-300' : 'bg-white hover:border-indigo-200'}">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-medium ${isCurrent ? 'text-indigo-700' : ''}">${p.label}</span>
+        ${running ? `<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">${running} rodando</span>` : ''}
+        <span class="text-xs text-gray-400">${p.testCount} teste(s)</span>
+      </div>
+      <span class="text-xs text-gray-400">uptime 30d: ${p.uptime}%</span>
+    </div>`;
+  }).join('');
+}
+
+function selectProject(project) {
+  _currentProject = project;
+  document.getElementById('project-select').value = project ?? '';
+  loadCreds();
+  loadTests();
+  loadMonitor();
+}
+
 // ── Open test modal ───────────────────────────────────────────────────────────
 async function openTest(name) {
-  const r = await fetch(`${API}/api/tests/${name}`).then(r => r.json());
+  const r = await apiFetch(`/api/tests/${name}`).then(r => r.json());
   _currentTest = r;
 
   document.getElementById('modal-test-title').textContent = r.filename;
@@ -512,7 +611,7 @@ async function saveTest() {
     schedule: document.getElementById('edit-schedule').value,
     credential: document.getElementById('edit-credential').value || undefined,
   };
-  const r = await fetch(`${API}/api/tests/${_currentTest.filename}`, {
+  const r = await apiFetch(`/api/tests/${_currentTest.filename}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
@@ -523,7 +622,7 @@ async function runTest() {
   if (!_currentTest) return;
   setLoading('btn-modal-run', true);
   document.getElementById('modal-run-result').textContent = 'rodando...';
-  const r = await fetch(`${API}/api/tests/${_currentTest.filename}/run`, { method: 'POST' }).then(r => r.json());
+  const r = await apiFetch(`/api/tests/${_currentTest.filename}/run`, { method: 'POST' }).then(r => r.json());
   setLoading('btn-modal-run', false);
   document.getElementById('modal-run-result').textContent = r.message?.split('\n')[0] ?? r.error;
   loadTests();
@@ -533,7 +632,7 @@ async function runTest() {
 async function toggleTest() {
   if (!_currentTest) return;
   const enabled = _currentTest.meta?.enabled !== false;
-  const r = await fetch(`${API}/api/tests/${_currentTest.filename}`, {
+  const r = await apiFetch(`/api/tests/${_currentTest.filename}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: !enabled }),
   }).then(r => r.json());
@@ -543,7 +642,7 @@ async function toggleTest() {
 
 async function deleteTest() {
   if (!_currentTest || !confirm(`Excluir ${_currentTest.filename}?`)) return;
-  const r = await fetch(`${API}/api/tests/${_currentTest.filename}`, { method: 'DELETE' }).then(r => r.json());
+  const r = await apiFetch(`/api/tests/${_currentTest.filename}`, { method: 'DELETE' }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
   if (!r.error) { closeModal('modal-test'); loadTests(); }
 }
@@ -565,7 +664,7 @@ async function createTest() {
   if (!name || !code) { errEl.textContent = 'Nome e código são obrigatórios.'; errEl.classList.remove('hidden'); return; }
 
   errEl.classList.add('hidden');
-  const r = await fetch(`${API}/api/tests`, {
+  const r = await apiFetch(`/api/tests`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name,
@@ -584,7 +683,7 @@ async function createTest() {
 // ── Run all ───────────────────────────────────────────────────────────────────
 async function runAll() {
   setLoading('btn-run-all', true);
-  const r = await fetch(`${API}/api/run-all`, { method: 'POST' }).then(r => r.json());
+  const r = await apiFetch(`/api/run-all`, { method: 'POST' }).then(r => r.json());
   setLoading('btn-run-all', false);
   toast(r.message?.split('\n')[0] ?? r.error, !!r.error);
   loadTests();
@@ -593,7 +692,7 @@ async function runAll() {
 
 // ── Credentials ───────────────────────────────────────────────────────────────
 async function loadCreds() {
-  const r = await fetch(`${API}/api/credentials`).then(r => r.json()).catch(() => ({ credentials: [] }));
+  const r = await apiFetch(`/api/credentials`).then(r => r.json()).catch(() => ({ credentials: [] }));
   _creds = r.credentials ?? [];
   renderCreds();
 }
@@ -646,7 +745,7 @@ async function saveCredential() {
   if (keys.some(k => !k)) { errEl.textContent = 'Todos os campos precisam de uma chave.'; errEl.classList.remove('hidden'); return; }
 
   const fields = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
-  const r = await fetch(`${API}/api/credentials`, {
+  const r = await apiFetch(`/api/credentials`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, fields }),
   }).then(r => r.json());
@@ -659,7 +758,7 @@ async function saveCredential() {
 
 async function deleteCred(name) {
   if (!confirm(`Excluir credencial "${name}"?`)) return;
-  const r = await fetch(`${API}/api/credentials/${name}`, { method: 'DELETE' }).then(r => r.json());
+  const r = await apiFetch(`/api/credentials/${name}`, { method: 'DELETE' }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
   loadCreds();
 }
@@ -668,7 +767,7 @@ async function deleteCred(name) {
 let _protectionHeaders = {};
 
 async function loadProtection() {
-  const r = await fetch(`${API}/api/protection`).then(r => r.json()).catch(() => ({ extraHeaders: {} }));
+  const r = await apiFetch(`/api/protection`).then(r => r.json()).catch(() => ({ extraHeaders: {} }));
   _protectionHeaders = r.extraHeaders ?? {};
   renderProtectionFields();
 }
@@ -708,7 +807,7 @@ async function saveProtection() {
   const keys = [...document.querySelectorAll('[data-prot-key]')].map(i => i.value.trim());
   const vals = [...document.querySelectorAll('[data-prot-val]')].map(i => i.value);
   const extraHeaders = Object.fromEntries(keys.filter(k => k).map((k, i) => [k, vals[i] ?? '']));
-  const r = await fetch(`${API}/api/protection`, {
+  const r = await apiFetch(`/api/protection`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ extraHeaders }),
   }).then(r => r.json());
@@ -725,7 +824,7 @@ async function clearProtection() {
 let _spEnabled = false;
 
 async function loadStatusPage() {
-  const cfg = await fetch(`${API}/api/status-page`).then(r => r.json()).catch(() => ({}));
+  const cfg = await apiFetch(`/api/status-page`).then(r => r.json()).catch(() => ({}));
   _spEnabled = cfg.enabled ?? false;
   document.getElementById('sp-name').value = cfg.name ?? '';
   document.getElementById('sp-slug').value = cfg.slug ?? '';
@@ -773,7 +872,7 @@ async function saveStatusPage() {
   const name  = document.getElementById('sp-name').value.trim();
   const slug  = document.getElementById('sp-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
   const tests = [...document.querySelectorAll('#sp-tests input:checked')].map(i => i.value);
-  const r = await fetch(`${API}/api/status-page`, {
+  const r = await apiFetch(`/api/status-page`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: _spEnabled, name, slug, tests }),
   }).then(r => r.json());
@@ -783,6 +882,7 @@ async function saveStatusPage() {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (async () => {
+  await loadProjects();
   await loadCreds();
   await loadTests();
   await loadMonitor();

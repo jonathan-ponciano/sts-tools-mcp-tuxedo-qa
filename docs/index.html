@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tuxedo-qa — MCP server for Playwright QA automation</title>
+<meta name="description" content="tuxedo-qa is an MCP server that lets Claude create, run, self-heal, and monitor Playwright tests directly, with a local dashboard, credential vault, and public status pages." />
+<style>
+  :root{
+    --bg:#f9fafb; --bg-alt:#ffffff; --text:#111827; --text-dim:#6b7280;
+    --border:#e5e7eb; --accent:#4f46e5; --accent-soft:#eef2ff;
+    --code-bg:#111827; --code-text:#e5e7eb; --shadow: 0 1px 2px rgba(0,0,0,.04);
+    --green:#16a34a; --red:#dc2626; --amber:#b45309;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0d12; --bg-alt:#12151c; --text:#e5e7eb; --text-dim:#9ca3af;
+      --border:#232733; --accent:#818cf8; --accent-soft:#1a1c2e;
+      --code-bg:#0a0c10; --code-text:#d1d5db; --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code, pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+  code{background:var(--accent-soft); padding:.15em .4em; border-radius:5px; font-size:.9em}
+  pre{background:var(--code-bg); color:var(--code-text); padding:16px 18px; border-radius:12px; overflow-x:auto; font-size:13px; box-shadow:var(--shadow)}
+  pre code{background:none; padding:0; font-size:1em; color:inherit}
+
+  .wrap{max-width:960px; margin:0 auto; padding:0 24px}
+
+  /* Nav */
+  nav{position:sticky; top:0; z-index:10; backdrop-filter:blur(8px); background:color-mix(in srgb, var(--bg) 85%, transparent); border-bottom:1px solid var(--border)}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; padding:14px 24px}
+  .brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:16px; color:var(--text)}
+  .brand .dot{width:9px;height:9px;border-radius:3px;background:var(--accent);display:inline-block}
+  .navlinks{display:flex; gap:22px; font-size:14px; color:var(--text-dim)}
+  .navlinks a{color:var(--text-dim)}
+  .navlinks a:hover{color:var(--text)}
+
+  /* Hero */
+  header.hero{padding:76px 0 56px; text-align:center}
+  .kicker{display:inline-block; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--accent); background:var(--accent-soft); padding:5px 12px; border-radius:999px; margin-bottom:20px}
+  h1{font-size:44px; line-height:1.12; margin:0 0 16px; letter-spacing:-0.02em}
+  .lede{font-size:19px; color:var(--text-dim); max-width:620px; margin:0 auto 32px}
+  .cta{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:11px 20px; border-radius:10px; font-size:14px; font-weight:600; border:1px solid transparent}
+  .btn-primary{background:var(--accent); color:#fff}
+  .btn-primary:hover{opacity:.92; text-decoration:none}
+  .btn-secondary{background:var(--bg-alt); color:var(--text); border-color:var(--border)}
+  .btn-secondary:hover{border-color:var(--accent); text-decoration:none}
+
+  section{padding:56px 0; border-top:1px solid var(--border)}
+  h2{font-size:26px; margin:0 0 8px; letter-spacing:-0.01em}
+  .section-sub{color:var(--text-dim); font-size:15px; margin:0 0 32px; max-width:600px}
+
+  /* Feature grid */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px}
+  .card{background:var(--bg-alt); border:1px solid var(--border); border-radius:14px; padding:20px; box-shadow:var(--shadow)}
+  .card .icon{font-size:20px; margin-bottom:10px; display:block}
+  .card h3{font-size:15px; margin:0 0 6px}
+  .card p{font-size:13.5px; color:var(--text-dim); margin:0}
+
+  /* Use cases */
+  .usecases{display:grid; gap:14px}
+  .usecase{display:flex; gap:16px; background:var(--bg-alt); border:1px solid var(--border); border-radius:14px; padding:18px 20px}
+  .usecase .num{flex-shrink:0; width:30px; height:30px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center}
+  .usecase h3{margin:0 0 4px; font-size:15px}
+  .usecase p{margin:0; font-size:13.5px; color:var(--text-dim)}
+
+  /* Tools table */
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:14px; background:var(--bg-alt)}
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  th,td{text-align:left; padding:12px 16px; border-bottom:1px solid var(--border); vertical-align:top}
+  th{color:var(--text-dim); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  td:first-child{white-space:nowrap; font-weight:600}
+  td code{font-size:12.5px}
+
+  /* Steps */
+  .steps{counter-reset:step; display:grid; gap:18px}
+  .step{display:flex; gap:16px}
+  .step::before{counter-increment:step; content:counter(step); flex-shrink:0; width:28px; height:28px; border-radius:50%; background:var(--accent); color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center}
+  .step-body{flex:1; padding-top:2px}
+  .step-body h3{margin:0 0 6px; font-size:15px}
+  .step-body p{margin:0 0 8px; font-size:13.5px; color:var(--text-dim)}
+
+  footer{padding:40px 0 60px; text-align:center; color:var(--text-dim); font-size:13px; border-top:1px solid var(--border)}
+  footer a{color:var(--text-dim); text-decoration:underline}
+
+  @media (max-width:640px){
+    h1{font-size:32px}
+    .navlinks{display:none}
+    header.hero{padding:52px 0 40px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span> tuxedo-qa</div>
+    <div class="navlinks">
+      <a href="#features">Features</a>
+      <a href="#use-cases">Use cases</a>
+      <a href="#tools">MCP tools</a>
+      <a href="#quickstart">Quickstart</a>
+      <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker">MCP server · Playwright · Claude</span>
+    <h1>Let Claude own your QA loop.</h1>
+    <p class="lede">
+      tuxedo-qa is an MCP server that gives Claude the tools to write, run, self-heal,
+      and monitor Playwright tests for your web app — with a local dashboard,
+      a credential vault, and a public status page, no CI pipeline required.
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">View on GitHub</a>
+      <a class="btn btn-secondary" href="#quickstart">Quickstart →</a>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>What it does</h2>
+    <p class="section-sub">A single MCP server, connected to Claude, exposing 13 tools that cover the full lifecycle of a synthetic test suite.</p>
+    <div class="grid">
+      <div class="card">
+        <span class="icon">✍️</span>
+        <h3>Natural-language test authoring</h3>
+        <p>Describe a flow, Claude writes the Playwright spec via <code>create_test</code> and saves it straight into the suite.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🩹</span>
+        <h3>Self-healing runs</h3>
+        <p><code>run_until_pass</code> re-runs a failing test, lets Claude patch it between attempts, until it goes green or hits the retry limit.</p>
+      </div>
+      <div class="card">
+        <span class="icon">⏱️</span>
+        <h3>Scheduled monitoring</h3>
+        <p>Attach a <code>1h</code> / <code>6h</code> / <code>24h</code> schedule to any test to run it as a synthetic monitor, not just a one-off check.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🔐</span>
+        <h3>Credential vault</h3>
+        <p>Named credential sets (admin, user_comum, …) are stored once and injected into test runs — never pasted into prompts.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🛡️</span>
+        <h3>Protection bypass headers</h3>
+        <p>One-click presets for Vercel Protection Bypass, Cloudflare Access, and Basic Auth so tests can reach gated staging environments.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📟</span>
+        <h3>Local dashboard</h3>
+        <p>A zero-config web UI to browse tests, edit specs, trigger runs, and manage credentials without touching the CLI.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📣</span>
+        <h3>Discord alerts</h3>
+        <p>Configure a webhook once and every run posts pass/fail results straight to your team's channel.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📊</span>
+        <h3>Public status page</h3>
+        <p>Turn any subset of tests into a shareable uptime page with a 60-run history bar, for stakeholders who don't need MCP access.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🧑‍🤝‍🧑</span>
+        <h3>Human-in-the-loop</h3>
+        <p>Tests can pause mid-run and wait for a human-supplied value (2FA codes, OTPs) via a simple file-based signal.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="use-cases">
+  <div class="wrap">
+    <h2>Use cases</h2>
+    <p class="section-sub">Built for teams that want real QA coverage without standing up a CI/CD testing pipeline.</p>
+    <div class="usecases">
+      <div class="usecase">
+        <div class="num">1</div>
+        <div><h3>Post-deploy smoke tests, driven from chat</h3>
+        <p>Ask Claude to run the suite right after a deploy — <code>pause_tests</code> beforehand to avoid false alerts, then <code>run_tests</code> once you're live.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">2</div>
+        <div><h3>Continuous synthetic monitoring</h3>
+        <p>Schedule critical flows (login, checkout, lead capture) to run every hour and surface failures via Discord before customers notice.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">3</div>
+        <div><h3>Testing behind auth walls</h3>
+        <p>Staging environments protected by Vercel/Cloudflare Access or Basic Auth are reachable via the built-in protection header presets.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">4</div>
+        <div><h3>Flows that need a human for one step</h3>
+        <p>SMS/email 2FA steps pause the test and wait for a value you supply through Claude, then resume automatically.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">5</div>
+        <div><h3>A status page for non-technical stakeholders</h3>
+        <p>Expose a curated set of tests as a public uptime page — no dashboard login, no MCP client required to view it.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tools">
+  <div class="wrap">
+    <h2>MCP tools reference</h2>
+    <p class="section-sub">Everything Claude can call once the server is connected.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>create_test</code></td><td>Create a new Playwright test file from generated test code.</td></tr>
+          <tr><td><code>list_tests</code></td><td>List all test files with their last known status; filter by status or limit.</td></tr>
+          <tr><td><code>read_test</code></td><td>Read the contents of a test file.</td></tr>
+          <tr><td><code>update_test</code></td><td>Update a test's script, display name, description, schedule, or enabled state.</td></tr>
+          <tr><td><code>delete_test</code></td><td>Permanently delete a test and its history. Prefer disabling via <code>update_test</code>.</td></tr>
+          <tr><td><code>run_tests</code></td><td>Run all tests or a specific file; respects pause state; notifies Discord if configured.</td></tr>
+          <tr><td><code>run_until_pass</code></td><td>Run a test repeatedly, applying fixes between attempts, until it passes or hits the retry cap.</td></tr>
+          <tr><td><code>get_status</code></td><td>Overall suite status, or per-test failure detail and fix suggestions.</td></tr>
+          <tr><td><code>pause_tests</code></td><td>Pause the whole suite for up to 60 minutes — auto-resumes.</td></tr>
+          <tr><td><code>set_webhook</code></td><td>Configure the Discord webhook URL used for run notifications.</td></tr>
+          <tr><td><code>create_credential</code></td><td>Create or update a named credential set (key-value fields).</td></tr>
+          <tr><td><code>list_credentials</code></td><td>List saved credential sets with masked values.</td></tr>
+          <tr><td><code>delete_credential</code></td><td>Delete a named credential set.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart">
+  <div class="wrap">
+    <h2>Quickstart</h2>
+    <p class="section-sub">Runs entirely on your machine — a local MCP server plus an optional dashboard.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-body">
+          <h3>Clone and install</h3>
+          <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
+cd sts-tools-mcp-tuxedo-qa
+npm install
+npm run build</code></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>Register it as an MCP server in Claude Code</h3>
+          <pre><code>claude mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>(Optional) start the local dashboard</h3>
+          <pre><code>npm run dashboard
+# → http://localhost:3131</code></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>Ask Claude to create your first test</h3>
+          <p>"Create a Playwright test that logs into staging and checks the dashboard loads" — Claude calls <code>create_test</code>, saves the spec, and can run it immediately with <code>run_tests</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>tuxedo-qa — MCP server for Playwright QA automation. <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Source on GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

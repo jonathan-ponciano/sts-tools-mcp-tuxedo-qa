@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tuxedo-qa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .tab-active { border-bottom: 2px solid #6366f1; color: #6366f1; }
+    .badge-passing  { background: #dcfce7; color: #166534; }
+    .badge-failing  { background: #fee2e2; color: #991b1b; }
+    .badge-disabled { background: #f3f4f6; color: #6b7280; }
+    .badge-never_ran{ background: #fef9c3; color: #854d0e; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    textarea { font-family: 'Courier New', monospace; font-size: 13px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen" id="app">
+
+<div class="max-w-5xl mx-auto px-4 py-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl font-bold tracking-tight text-indigo-600">tuxedo-qa</span>
+      <span class="text-sm text-gray-400">QA monitor</span>
+    </div>
+    <div id="status-bar" class="flex items-center gap-4 text-sm text-gray-500">
+      <span id="status-summary">carregando...</span>
+      <button onclick="runAll()" id="btn-run-all"
+        class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition">
+        ▶ Rodar todos
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-6 border-b border-gray-200 mb-6 text-sm font-medium text-gray-500">
+    <button onclick="setTab('tests')"      id="tab-tests"      class="pb-2 tab-active">Testes</button>
+    <button onclick="setTab('creds')"      id="tab-creds"      class="pb-2">Credenciais</button>
+    <button onclick="setTab('protection')" id="tab-protection" class="pb-2">Proteção</button>
+    <button onclick="setTab('statuspage')" id="tab-statuspage" class="pb-2">Status Page</button>
+  </div>
+
+  <!-- ── TESTES ── -->
+  <div id="panel-tests">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-sm font-semibold text-gray-700">Testes configurados</h2>
+      <button onclick="openCreateModal()"
+        class="px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition">
+        + Novo teste
+      </button>
+    </div>
+    <div id="tests-list" class="space-y-2"></div>
+  </div>
+
+  <!-- ── PROTEÇÃO ── -->
+  <div id="panel-protection" class="hidden">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Headers de bypass</h2>
+    <p class="text-xs text-gray-500 mb-4">Esses headers são enviados em todas as requisições do Playwright. Use para Vercel Protection Bypass, Cloudflare Access, Basic Auth ou qualquer header customizado.</p>
+
+    <div class="bg-white border rounded-xl p-4 space-y-3 mb-4">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Atalhos</p>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="addProtectionPreset('vercel')"     class="px-3 py-1 text-xs bg-gray-100 rounded-lg hover:bg-gray-200">Vercel Bypass</button>
+        <button onclick="addProtectionPreset('cloudflare')" class="px-3 py-1 text-xs bg-gray-100 rounded-lg hover:bg-gray-200">Cloudflare Access</button>
+        <button onclick="addProtectionPreset('basic')"      class="px-3 py-1 text-xs bg-gray-100 rounded-lg hover:bg-gray-200">Basic Auth</button>
+        <button onclick="addProtectionPreset('custom')"     class="px-3 py-1 text-xs bg-gray-100 rounded-lg hover:bg-gray-200">+ Header custom</button>
+      </div>
+    </div>
+
+    <div id="protection-fields" class="space-y-2 mb-4"></div>
+
+    <div class="flex justify-end gap-2">
+      <button onclick="clearProtection()" class="px-3 py-1.5 text-xs text-red-500 hover:text-red-700">Limpar tudo</button>
+      <button onclick="saveProtection()"  class="px-4 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+    </div>
+  </div>
+
+  <!-- ── STATUS PAGE ── -->
+  <div id="panel-statuspage" class="hidden">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Página pública de status</h2>
+    <div class="bg-white border rounded-xl p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <label class="text-sm font-medium">Ativa</label>
+        <button id="sp-toggle" onclick="toggleStatusPage()" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 transition">
+          <span id="sp-toggle-dot" class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white shadow transition"></span>
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Nome público</label>
+          <input id="sp-name" type="text" placeholder="Meu App" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Slug (URL)</label>
+          <input id="sp-slug" type="text" placeholder="meu-app" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-2">Testes exibidos</label>
+        <div id="sp-tests" class="space-y-1.5"></div>
+      </div>
+      <div id="sp-url-box" class="hidden bg-indigo-50 rounded-lg px-3 py-2">
+        <p class="text-xs text-gray-500 mb-1">URL pública</p>
+        <a id="sp-url" href="#" target="_blank" class="text-sm text-indigo-600 font-medium hover:underline"></a>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="saveStatusPage()" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CREDENCIAIS ── -->
+  <div id="panel-creds" class="hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-sm font-semibold text-gray-700">Credenciais</h2>
+      <button onclick="openCredModal()"
+        class="px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition">
+        + Nova credencial
+      </button>
+    </div>
+    <div id="creds-list" class="space-y-2"></div>
+  </div>
+
+</div>
+
+<!-- ── MODAL: detalhes/edição de teste ── -->
+<div id="modal-test" class="fixed inset-0 bg-black/40 z-50 hidden flex items-start justify-center pt-10 px-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 id="modal-test-title" class="font-semibold text-gray-900">Teste</h3>
+      <div class="flex gap-2">
+        <button id="btn-modal-run" onclick="runTest()"
+          class="px-3 py-1 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          ▶ Rodar
+        </button>
+        <button id="btn-modal-toggle" onclick="toggleTest()"
+          class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+        </button>
+        <button id="btn-modal-delete" onclick="deleteTest()"
+          class="px-3 py-1 text-xs font-medium bg-red-50 text-red-600 rounded-lg hover:bg-red-100">
+          Excluir
+        </button>
+        <button onclick="closeModal('modal-test')" class="text-gray-400 hover:text-gray-600 ml-2 text-lg leading-none">×</button>
+      </div>
+    </div>
+
+    <div class="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+      <!-- Meta -->
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Schedule</label>
+          <select id="edit-schedule" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+            <option value="1h">1h</option>
+            <option value="6h">6h</option>
+            <option value="24h">24h</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Credential</label>
+          <select id="edit-credential" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+            <option value="">— nenhuma —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Error box -->
+      <div id="modal-failure" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+        <div class="font-semibold mb-1" id="modal-failure-code"></div>
+        <pre id="modal-failure-msg"></pre>
+      </div>
+
+      <!-- Code editor -->
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Código do teste</label>
+        <textarea id="edit-code"
+          class="w-full border rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          rows="22"></textarea>
+      </div>
+    </div>
+
+    <div class="px-5 py-3 border-t flex justify-between items-center">
+      <span id="modal-run-result" class="text-xs text-gray-500"></span>
+      <button onclick="saveTest()"
+        class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: criar teste ── -->
+<div id="modal-create" class="fixed inset-0 bg-black/40 z-50 hidden flex items-start justify-center pt-10 px-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 class="font-semibold text-gray-900">Novo teste</h3>
+      <button onclick="closeModal('modal-create')" class="text-gray-400 hover:text-gray-600 text-lg">×</button>
+    </div>
+    <div class="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Nome (sem extensão)</label>
+        <input id="create-name" type="text" placeholder="login-meuapp"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Schedule</label>
+          <select id="create-schedule" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+            <option value="1h">1h</option>
+            <option value="6h">6h</option>
+            <option value="24h">24h</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Credential</label>
+          <select id="create-credential" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+            <option value="">— nenhuma —</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Código</label>
+        <textarea id="create-code"
+          class="w-full border rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          rows="18"
+          placeholder="import { test, expect } from '@playwright/test';&#10;&#10;test('meu teste', async ({ page }) => {&#10;  await page.goto('https://...');&#10;});"
+        ></textarea>
+      </div>
+      <p id="create-error" class="text-xs text-red-600 hidden"></p>
+    </div>
+    <div class="px-5 py-3 border-t flex justify-end">
+      <button onclick="createTest()"
+        class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        Criar e testar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: nova credencial ── -->
+<div id="modal-cred" class="fixed inset-0 bg-black/40 z-50 hidden flex items-start justify-center pt-10 px-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 class="font-semibold text-gray-900">Nova credencial</h3>
+      <button onclick="closeModal('modal-cred')" class="text-gray-400 hover:text-gray-600 text-lg">×</button>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Label (ex: meuapp-prod)</label>
+        <input id="cred-name" type="text" placeholder="meuapp-prod"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      </div>
+      <div id="cred-fields" class="space-y-2">
+        <div class="flex gap-2">
+          <input type="text"  placeholder="KEY"   class="cred-key   w-1/3 border rounded-lg px-2 py-1.5 text-sm" />
+          <input type="text"  placeholder="valor" class="cred-val   flex-1 border rounded-lg px-2 py-1.5 text-sm" />
+        </div>
+      </div>
+      <button onclick="addCredField()" class="text-xs text-indigo-600 hover:underline">+ campo</button>
+      <p id="cred-error" class="text-xs text-red-600 hidden"></p>
+    </div>
+    <div class="px-5 py-3 border-t flex justify-end">
+      <button onclick="saveCredential()"
+        class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast" class="fixed bottom-5 right-5 z-50 hidden">
+  <div id="toast-msg" class="bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg max-w-xs"></div>
+</div>
+
+<script>
+const API = 'http://localhost:3131';
+let _tests = [];
+let _creds = [];
+let _currentTest = null;
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  const msg_el = document.getElementById('toast-msg');
+  msg_el.textContent = msg;
+  msg_el.className = `${err ? 'bg-red-700' : 'bg-gray-900'} text-white text-sm px-4 py-2.5 rounded-xl shadow-lg max-w-xs`;
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 3500);
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.style.opacity = loading ? '0.6' : '1';
+}
+
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+const ALL_TABS = ['tests','creds','protection','statuspage'];
+function setTab(tab) {
+  ALL_TABS.forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`tab-${t}`).classList.toggle('tab-active', t === tab);
+  });
+  if (tab === 'creds')       loadCreds();
+  if (tab === 'protection')  loadProtection();
+  if (tab === 'statuspage')  loadStatusPage();
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+async function loadStatus() {
+  const r = await fetch(`${API}/api/status`).then(r => r.json()).catch(() => ({}));
+  const lr = r.lastRun;
+  if (!lr) { document.getElementById('status-summary').textContent = 'nenhum run ainda'; return; }
+  const d = new Date(lr.run_at);
+  const when = d.toLocaleString('pt-BR', { hour12: false, dateStyle: 'short', timeStyle: 'short' });
+  const color = lr.failed > 0 ? 'text-red-600' : 'text-green-600';
+  document.getElementById('status-summary').innerHTML =
+    `<span class="${color} font-medium">${lr.passed} ok · ${lr.failed} falhou</span> · ${when}`;
+}
+
+// ── Tests list ────────────────────────────────────────────────────────────────
+async function loadTests() {
+  const r = await fetch(`${API}/api/tests`).then(r => r.json()).catch(() => ({ tests: [] }));
+  _tests = r.tests ?? [];
+  renderTests();
+  loadStatus();
+}
+
+function renderTests() {
+  const el = document.getElementById('tests-list');
+  if (!_tests.length) { el.innerHTML = '<p class="text-sm text-gray-400">Nenhum teste ainda.</p>'; return; }
+  el.innerHTML = _tests.map(t => `
+    <div onclick="openTest('${t.filename}')"
+      class="flex items-center justify-between bg-white border rounded-xl px-4 py-3 cursor-pointer hover:border-indigo-300 transition">
+      <div class="flex items-center gap-3">
+        <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
+        <span class="text-sm font-medium">${t.filename}</span>
+        ${t.credential ? `<span class="text-xs text-gray-400">🔑 ${t.credential}</span>` : ''}
+        ${t.tags?.length ? `<span class="text-xs text-gray-400">${t.tags.join(', ')}</span>` : ''}
+      </div>
+      <span class="text-xs text-gray-400">${t.schedule ?? '—'}</span>
+    </div>
+  `).join('');
+}
+
+// ── Open test modal ───────────────────────────────────────────────────────────
+async function openTest(name) {
+  const r = await fetch(`${API}/api/tests/${name}`).then(r => r.json());
+  _currentTest = r;
+
+  document.getElementById('modal-test-title').textContent = r.filename;
+  document.getElementById('edit-code').value = r.code;
+  document.getElementById('edit-schedule').value = r.meta?.schedule ?? '24h';
+  document.getElementById('modal-run-result').textContent = '';
+
+  const enabled = r.meta?.enabled !== false;
+  document.getElementById('btn-modal-toggle').textContent = enabled ? 'Desativar' : 'Ativar';
+
+  // failure
+  const failEl = document.getElementById('modal-failure');
+  if (r.failure) {
+    document.getElementById('modal-failure-code').textContent = `[${r.failure.error_code}]`;
+    document.getElementById('modal-failure-msg').textContent = r.failure.error.split('\n')[0];
+    failEl.classList.remove('hidden');
+  } else {
+    failEl.classList.add('hidden');
+  }
+
+  // populate credential selector
+  populateCredSelect('edit-credential', r.meta?.credential ?? '');
+
+  document.getElementById('modal-test').classList.remove('hidden');
+}
+
+function populateCredSelect(selId, current) {
+  const sel = document.getElementById(selId);
+  sel.innerHTML = '<option value="">— nenhuma —</option>' +
+    _creds.map(c => `<option value="${c.name}" ${c.name === current ? 'selected' : ''}>${c.name}</option>`).join('');
+}
+
+async function saveTest() {
+  if (!_currentTest) return;
+  const body = {
+    test_code: document.getElementById('edit-code').value,
+    schedule: document.getElementById('edit-schedule').value,
+    credential: document.getElementById('edit-credential').value || undefined,
+  };
+  const r = await fetch(`${API}/api/tests/${_currentTest.filename}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (!r.error) loadTests();
+}
+
+async function runTest() {
+  if (!_currentTest) return;
+  setLoading('btn-modal-run', true);
+  document.getElementById('modal-run-result').textContent = 'rodando...';
+  const r = await fetch(`${API}/api/tests/${_currentTest.filename}/run`, { method: 'POST' }).then(r => r.json());
+  setLoading('btn-modal-run', false);
+  document.getElementById('modal-run-result').textContent = r.message?.split('\n')[0] ?? r.error;
+  loadTests();
+  loadStatus();
+}
+
+async function toggleTest() {
+  if (!_currentTest) return;
+  const enabled = _currentTest.meta?.enabled !== false;
+  const r = await fetch(`${API}/api/tests/${_currentTest.filename}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !enabled }),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (!r.error) { closeModal('modal-test'); loadTests(); }
+}
+
+async function deleteTest() {
+  if (!_currentTest || !confirm(`Excluir ${_currentTest.filename}?`)) return;
+  const r = await fetch(`${API}/api/tests/${_currentTest.filename}`, { method: 'DELETE' }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (!r.error) { closeModal('modal-test'); loadTests(); }
+}
+
+// ── Create test modal ─────────────────────────────────────────────────────────
+function openCreateModal() {
+  document.getElementById('create-name').value = '';
+  document.getElementById('create-code').value = '';
+  document.getElementById('create-schedule').value = '24h';
+  document.getElementById('create-error').classList.add('hidden');
+  populateCredSelect('create-credential', '');
+  document.getElementById('modal-create').classList.remove('hidden');
+}
+
+async function createTest() {
+  const name = document.getElementById('create-name').value.trim();
+  const code = document.getElementById('create-code').value.trim();
+  const errEl = document.getElementById('create-error');
+  if (!name || !code) { errEl.textContent = 'Nome e código são obrigatórios.'; errEl.classList.remove('hidden'); return; }
+
+  errEl.classList.add('hidden');
+  const r = await fetch(`${API}/api/tests`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      test_code: code,
+      schedule: document.getElementById('create-schedule').value,
+      credential: document.getElementById('create-credential').value || undefined,
+    }),
+  }).then(r => r.json());
+
+  if (r.error) { errEl.textContent = r.error; errEl.classList.remove('hidden'); return; }
+  toast(r.message);
+  closeModal('modal-create');
+  loadTests();
+}
+
+// ── Run all ───────────────────────────────────────────────────────────────────
+async function runAll() {
+  setLoading('btn-run-all', true);
+  const r = await fetch(`${API}/api/run-all`, { method: 'POST' }).then(r => r.json());
+  setLoading('btn-run-all', false);
+  toast(r.message?.split('\n')[0] ?? r.error, !!r.error);
+  loadTests();
+  loadStatus();
+}
+
+// ── Credentials ───────────────────────────────────────────────────────────────
+async function loadCreds() {
+  const r = await fetch(`${API}/api/credentials`).then(r => r.json()).catch(() => ({ credentials: [] }));
+  _creds = r.credentials ?? [];
+  renderCreds();
+}
+
+function renderCreds() {
+  const el = document.getElementById('creds-list');
+  if (!_creds.length) { el.innerHTML = '<p class="text-sm text-gray-400">Nenhuma credencial ainda.</p>'; return; }
+  el.innerHTML = _creds.map(c => `
+    <div class="bg-white border rounded-xl px-4 py-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium">${c.name}</span>
+        <button onclick="deleteCred('${c.name}')" class="text-xs text-red-400 hover:text-red-600">Excluir</button>
+      </div>
+      <div class="space-y-0.5">
+        ${Object.entries(c.fields).map(([k,v]) =>
+          `<div class="flex gap-2 text-xs text-gray-500"><span class="font-mono font-medium w-28 shrink-0">${k}</span><span>${v}</span></div>`
+        ).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openCredModal() {
+  document.getElementById('cred-name').value = '';
+  document.getElementById('cred-error').classList.add('hidden');
+  document.getElementById('cred-fields').innerHTML = `
+    <div class="flex gap-2">
+      <input type="text" placeholder="KEY"   class="cred-key w-1/3 border rounded-lg px-2 py-1.5 text-sm" />
+      <input type="text" placeholder="valor" class="cred-val flex-1 border rounded-lg px-2 py-1.5 text-sm" />
+    </div>`;
+  document.getElementById('modal-cred').classList.remove('hidden');
+}
+
+function addCredField() {
+  const row = document.createElement('div');
+  row.className = 'flex gap-2';
+  row.innerHTML = `
+    <input type="text" placeholder="KEY"   class="cred-key w-1/3 border rounded-lg px-2 py-1.5 text-sm" />
+    <input type="text" placeholder="valor" class="cred-val flex-1 border rounded-lg px-2 py-1.5 text-sm" />`;
+  document.getElementById('cred-fields').appendChild(row);
+}
+
+async function saveCredential() {
+  const name = document.getElementById('cred-name').value.trim();
+  const keys = [...document.querySelectorAll('.cred-key')].map(i => i.value.trim());
+  const vals = [...document.querySelectorAll('.cred-val')].map(i => i.value);
+  const errEl = document.getElementById('cred-error');
+
+  if (!name) { errEl.textContent = 'Label obrigatório.'; errEl.classList.remove('hidden'); return; }
+  if (keys.some(k => !k)) { errEl.textContent = 'Todos os campos precisam de uma chave.'; errEl.classList.remove('hidden'); return; }
+
+  const fields = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
+  const r = await fetch(`${API}/api/credentials`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, fields }),
+  }).then(r => r.json());
+
+  if (r.error) { errEl.textContent = r.error; errEl.classList.remove('hidden'); return; }
+  toast(r.message);
+  closeModal('modal-cred');
+  loadCreds();
+}
+
+async function deleteCred(name) {
+  if (!confirm(`Excluir credencial "${name}"?`)) return;
+  const r = await fetch(`${API}/api/credentials/${name}`, { method: 'DELETE' }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  loadCreds();
+}
+
+// ── Protection ────────────────────────────────────────────────────────────────
+let _protectionHeaders = {};
+
+async function loadProtection() {
+  const r = await fetch(`${API}/api/protection`).then(r => r.json()).catch(() => ({ extraHeaders: {} }));
+  _protectionHeaders = r.extraHeaders ?? {};
+  renderProtectionFields();
+}
+
+function renderProtectionFields() {
+  const el = document.getElementById('protection-fields');
+  const entries = Object.entries(_protectionHeaders);
+  if (!entries.length) { el.innerHTML = '<p class="text-xs text-gray-400">Nenhum header configurado.</p>'; return; }
+  el.innerHTML = entries.map(([k, v]) => `
+    <div class="flex gap-2 items-center">
+      <input type="text" value="${k}" placeholder="Header" data-prot-key class="w-1/3 border rounded-lg px-2 py-1.5 text-sm font-mono" />
+      <input type="text" value="${v}" placeholder="Valor"  data-prot-val class="flex-1 border rounded-lg px-2 py-1.5 text-sm font-mono" />
+      <button onclick="this.closest('.flex').remove()" class="text-red-400 hover:text-red-600 text-lg leading-none px-1">×</button>
+    </div>`).join('');
+}
+
+function addProtectionPreset(type) {
+  const el = document.getElementById('protection-fields');
+  const presets = {
+    vercel:     [['x-vercel-protection-bypass', '']],
+    cloudflare: [['CF-Access-Client-Id', ''], ['CF-Access-Client-Secret', '']],
+    basic:      [['Authorization', 'Basic ']],
+    custom:     [['X-Custom-Header', '']],
+  };
+  (presets[type] ?? []).forEach(([k, v]) => {
+    const row = document.createElement('div');
+    row.className = 'flex gap-2 items-center';
+    row.innerHTML = `
+      <input type="text" value="${k}" data-prot-key class="w-1/3 border rounded-lg px-2 py-1.5 text-sm font-mono" />
+      <input type="text" value="${v}" data-prot-val placeholder="cole o valor aqui" class="flex-1 border rounded-lg px-2 py-1.5 text-sm font-mono" />
+      <button onclick="this.closest('.flex').remove()" class="text-red-400 hover:text-red-600 text-lg leading-none px-1">×</button>`;
+    el.appendChild(row);
+  });
+}
+
+async function saveProtection() {
+  const keys = [...document.querySelectorAll('[data-prot-key]')].map(i => i.value.trim());
+  const vals = [...document.querySelectorAll('[data-prot-val]')].map(i => i.value);
+  const extraHeaders = Object.fromEntries(keys.filter(k => k).map((k, i) => [k, vals[i] ?? '']));
+  const r = await fetch(`${API}/api/protection`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ extraHeaders }),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+}
+
+async function clearProtection() {
+  if (!confirm('Remover todos os headers de proteção?')) return;
+  document.getElementById('protection-fields').innerHTML = '';
+  await saveProtection();
+}
+
+// ── Status Page ───────────────────────────────────────────────────────────────
+let _spEnabled = false;
+
+async function loadStatusPage() {
+  const cfg = await fetch(`${API}/api/status-page`).then(r => r.json()).catch(() => ({}));
+  _spEnabled = cfg.enabled ?? false;
+  document.getElementById('sp-name').value = cfg.name ?? '';
+  document.getElementById('sp-slug').value = cfg.slug ?? '';
+  updateSpToggle();
+  renderSpTests(cfg.tests ?? []);
+  updateSpUrl(cfg.slug, cfg.enabled);
+}
+
+function updateSpToggle() {
+  const btn = document.getElementById('sp-toggle');
+  const dot = document.getElementById('sp-toggle-dot');
+  btn.style.background = _spEnabled ? '#6366f1' : '#d1d5db';
+  dot.style.transform = _spEnabled ? 'translateX(20px)' : 'translateX(4px)';
+}
+
+function toggleStatusPage() {
+  _spEnabled = !_spEnabled;
+  updateSpToggle();
+}
+
+function renderSpTests(selected) {
+  const el = document.getElementById('sp-tests');
+  el.innerHTML = _tests.map(t => `
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" value="${t.filename}" ${selected.includes(t.filename) ? 'checked' : ''}
+        class="rounded text-indigo-600" />
+      <span class="text-sm">${t.filename}</span>
+    </label>`).join('');
+}
+
+function updateSpUrl(slug, enabled) {
+  const box = document.getElementById('sp-url-box');
+  const link = document.getElementById('sp-url');
+  if (slug && enabled) {
+    const url = `${API}/status/${slug}`;
+    link.textContent = url;
+    link.href = url;
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+}
+
+async function saveStatusPage() {
+  const name  = document.getElementById('sp-name').value.trim();
+  const slug  = document.getElementById('sp-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
+  const tests = [...document.querySelectorAll('#sp-tests input:checked')].map(i => i.value);
+  const r = await fetch(`${API}/api/status-page`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: _spEnabled, name, slug, tests }),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  updateSpUrl(slug, _spEnabled);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await loadCreds();
+  await loadTests();
+})();
+</script>
+</body>
+</html>

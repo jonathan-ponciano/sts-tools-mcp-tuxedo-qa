@@ -2,6 +2,7 @@ import { unlinkSync, existsSync } from 'fs';
 import { join, basename } from 'path';
 import { z } from 'zod';
 import { TESTS_DIR } from '../lib/paths.js';
+import { deleteTestMeta } from '../lib/test-metadata.js';
 
 export const deleteTestSchema = z.object({
   name: z.string().describe('Test file name (with or without .spec.ts)'),
@@ -25,5 +26,6 @@ export function deleteTest(input: DeleteTestInput): string {
   }
 
   unlinkSync(filePath);
+  deleteTestMeta(`${safeName}.spec.ts`);
   return `Test "${safeName}.spec.ts" deleted permanently.`;
 }

@@ -1,7 +1,9 @@
+import { existsSync, readdirSync } from 'fs';
 import { z } from 'zod';
 import { readLastRun, type TestFailure } from '../lib/results-store.js';
 import { getAllMeta, getTestMeta } from '../lib/test-metadata.js';
 import { nextRunAt } from '../lib/scheduler.js';
+import { TESTS_DIR } from '../lib/paths.js';
 import { basename } from 'path';
 
 export const getStatusSchema = z.object({
@@ -113,7 +115,11 @@ export function getStatus(input: GetStatusInput = {}): string {
   }
 
   const meta = getAllMeta();
+  const existingFiles = new Set(
+    existsSync(TESTS_DIR) ? readdirSync(TESTS_DIR).filter((f) => f.endsWith('.spec.ts')) : [],
+  );
   const nextRuns = Object.entries(meta)
+    .filter(([file]) => existingFiles.has(file))
     .map(([file, m]) => ({ file, next: nextRunAt(m) }))
     .filter((e): e is { file: string; next: string } => e.next !== null)
     .sort((a, b) => a.next.localeCompare(b.next));

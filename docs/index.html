@@ -147,7 +147,7 @@
       <div class="card">
         <span class="icon">🩹</span>
         <h3>Execução autocorretiva</h3>
-        <p><code>run_until_pass</code> roda o teste de novo, deixando seu agente de IA corrigi-lo entre as tentativas, até passar ou atingir o limite de tentativas.</p>
+        <p><code>run_until_pass</code> roda o teste de novo aplicando correções automáticas (timeout, matching de URL, espera de rede) entre as tentativas; quando nenhuma regra resolve, devolve uma sugestão pro seu agente de IA corrigir via <code>update_test</code>.</p>
       </div>
       <div class="card">
         <span class="icon">⏱️</span>

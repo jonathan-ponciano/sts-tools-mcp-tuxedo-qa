@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>tuxedo-qa — MCP server for Playwright QA automation</title>
-<meta name="description" content="tuxedo-qa is an MCP server that lets Claude create, run, self-heal, and monitor Playwright tests directly, with a local dashboard, credential vault, and public status pages." />
+<meta name="description" content="tuxedo-qa is an MCP server that lets Claude, Gemini, and other AI assistants create, run, self-heal, and monitor Playwright tests directly, with a local dashboard, credential vault, and public status pages." />
 <style>
   :root{
     --bg:#f9fafb; --bg-alt:#ffffff; --text:#111827; --text-dim:#6b7280;
@@ -119,12 +119,13 @@
 
 <header class="hero">
   <div class="wrap">
-    <span class="kicker">MCP server · Playwright · Claude</span>
-    <h1>Let Claude own your QA loop.</h1>
+    <span class="kicker">MCP server · Playwright · Claude · Gemini</span>
+    <h1>Let your AI agent own your QA loop.</h1>
     <p class="lede">
-      tuxedo-qa is an MCP server that gives Claude the tools to write, run, self-heal,
-      and monitor Playwright tests for your web app — with a local dashboard,
-      a credential vault, and a public status page, no CI pipeline required.
+      tuxedo-qa is an MCP server that gives Claude, Gemini, and any other MCP-compatible
+      assistant the tools to write, run, self-heal, and monitor Playwright tests for your
+      web app — with a local dashboard, a credential vault, and a public status page,
+      no CI pipeline required.
     </p>
     <div class="cta">
       <a class="btn btn-primary" href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">View on GitHub</a>
@@ -136,17 +137,17 @@
 <section id="features">
   <div class="wrap">
     <h2>What it does</h2>
-    <p class="section-sub">A single MCP server, connected to Claude, exposing 13 tools that cover the full lifecycle of a synthetic test suite.</p>
+    <p class="section-sub">A single MCP server, connected to Claude, Gemini, or any MCP-compatible client, exposing 13 tools that cover the full lifecycle of a synthetic test suite.</p>
     <div class="grid">
       <div class="card">
         <span class="icon">✍️</span>
         <h3>Natural-language test authoring</h3>
-        <p>Describe a flow, Claude writes the Playwright spec via <code>create_test</code> and saves it straight into the suite.</p>
+        <p>Describe a flow, your AI agent writes the Playwright spec via <code>create_test</code> and saves it straight into the suite.</p>
       </div>
       <div class="card">
         <span class="icon">🩹</span>
         <h3>Self-healing runs</h3>
-        <p><code>run_until_pass</code> re-runs a failing test, lets Claude patch it between attempts, until it goes green or hits the retry limit.</p>
+        <p><code>run_until_pass</code> re-runs a failing test, lets your AI agent patch it between attempts, until it goes green or hits the retry limit.</p>
       </div>
       <div class="card">
         <span class="icon">⏱️</span>
@@ -195,7 +196,7 @@
       <div class="usecase">
         <div class="num">1</div>
         <div><h3>Post-deploy smoke tests, driven from chat</h3>
-        <p>Ask Claude to run the suite right after a deploy — <code>pause_tests</code> beforehand to avoid false alerts, then <code>run_tests</code> once you're live.</p></div>
+        <p>Ask Claude or Gemini to run the suite right after a deploy — <code>pause_tests</code> beforehand to avoid false alerts, then <code>run_tests</code> once you're live.</p></div>
       </div>
       <div class="usecase">
         <div class="num">2</div>
@@ -210,7 +211,7 @@
       <div class="usecase">
         <div class="num">4</div>
         <div><h3>Flows that need a human for one step</h3>
-        <p>SMS/email 2FA steps pause the test and wait for a value you supply through Claude, then resume automatically.</p></div>
+        <p>SMS/email 2FA steps pause the test and wait for a value you supply through your AI agent, then resume automatically.</p></div>
       </div>
       <div class="usecase">
         <div class="num">5</div>
@@ -224,7 +225,7 @@
 <section id="tools">
   <div class="wrap">
     <h2>MCP tools reference</h2>
-    <p class="section-sub">Everything Claude can call once the server is connected.</p>
+    <p class="section-sub">Everything Claude, Gemini, or any other MCP client can call once the server is connected.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
@@ -264,8 +265,11 @@ npm run build</code></pre>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Register it as an MCP server in Claude Code</h3>
+          <h3>Register it as an MCP server</h3>
+          <p>Works with any MCP-compatible client. For example, Claude Code:</p>
           <pre><code>claude mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
+          <p>Or Gemini CLI:</p>
+          <pre><code>gemini mcp add tuxedoqa -- node "$(pwd)/dist/index.js"</code></pre>
         </div>
       </div>
       <div class="step">
@@ -277,8 +281,8 @@ npm run build</code></pre>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Ask Claude to create your first test</h3>
-          <p>"Create a Playwright test that logs into staging and checks the dashboard loads" — Claude calls <code>create_test</code>, saves the spec, and can run it immediately with <code>run_tests</code>.</p>
+          <h3>Ask your AI agent to create your first test</h3>
+          <p>"Create a Playwright test that logs into staging and checks the dashboard loads" — Claude or Gemini calls <code>create_test</code>, saves the spec, and can run it immediately with <code>run_tests</code>.</p>
         </div>
       </div>
     </div>

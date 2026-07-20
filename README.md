@@ -54,6 +54,22 @@ npm run dashboard    # dashboard em modo dev
 npm test             # roda a suíte Playwright diretamente
 ```
 
+## Navegador headless vs. visível
+
+Por padrão, todo teste roda **headless** — o Chromium abre em background, sem janela
+nenhuma na tela. Pra acompanhar visualmente o que o teste está fazendo (útil pra debugar
+um fluxo novo), basta passar a flag `PWHEADED=1` antes do comando:
+
+```bash
+npx playwright test                # headless (padrão)
+PWHEADED=1 npx playwright test     # abre o navegador visível
+PWHEADED=1 npm run dev             # mesma flag funciona rodando via o servidor MCP
+```
+
+Isso vale pra qualquer execução — manual, via dashboard, ou disparada pelo Claude/Gemini
+com `run_tests`/`run_until_pass`/`create_test` — porque todas passam pelo mesmo runner
+(`src/lib/playwright-runner.ts`), que lê `playwright.config.ts`.
+
 ## Licença
 
 MIT

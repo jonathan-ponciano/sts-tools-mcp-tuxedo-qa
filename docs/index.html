@@ -285,6 +285,13 @@ npm run build</code></pre>
           <p>"Crie um teste Playwright que faz login no staging e confere se o dashboard carrega" — o Claude ou Gemini chama <code>create_test</code>, salva a spec, e pode rodar na hora com <code>run_tests</code>.</p>
         </div>
       </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>(Opcional) ver o navegador rodando</h3>
+          <p>Por padrão todo teste roda headless (sem janela). Pra acompanhar visualmente o que está acontecendo, passe <code>PWHEADED=1</code> antes do comando — funciona rodando direto, pelo dashboard, ou disparado pelo Claude/Gemini:</p>
+          <pre><code>PWHEADED=1 npx playwright test</code></pre>
+        </div>
+      </div>
     </div>
   </div>
 </section>

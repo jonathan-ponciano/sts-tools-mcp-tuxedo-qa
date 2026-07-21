@@ -4,6 +4,7 @@ import { CONFIG_DIR } from './paths.js';
 import { sendDiscordWebhook } from './discord-webhook.js';
 import { sendSlackWebhook } from './slack-webhook.js';
 import { sendGenericWebhook } from './generic-webhook.js';
+import { getAllMeta } from './test-metadata.js';
 import type { RunSummary } from './results-store.js';
 
 export type WebhookPlatform = 'discord' | 'slack' | 'generic';
@@ -51,9 +52,25 @@ const SENDERS: Record<WebhookPlatform, (url: string, summary: RunSummary) => Pro
 // announced" — used by both run_tests (manual/dashboard-triggered runs) and
 // the scheduler (automatic runs), so the notify-on-failure-or-all logic and
 // platform dispatch only exist in one place.
-export async function notifyIfConfigured(configDir: string, summary: RunSummary | null): Promise<void> {
+//
+// `involvedFiles` gates this on the sandbox flag: an unvalidated (draft)
+// test being manually iterated on — e.g. update_test + run_tests in a fix
+// loop — shouldn't spam the webhook on every failing attempt. Missing
+// `validated` (tests saved before this field existed) counts as trusted.
+export async function notifyIfConfigured(
+  configDir: string,
+  summary: RunSummary | null,
+  involvedFiles: string[] = [],
+): Promise<void> {
   const webhook = readWebhook(configDir);
   if (!webhook || !summary) return;
+
+  if (involvedFiles.length > 0) {
+    const meta = getAllMeta(configDir);
+    const anyValidated = involvedFiles.some((f) => meta[f]?.validated !== false);
+    if (!anyValidated) return;
+  }
+
   const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
   if (shouldNotify) await SENDERS[webhook.platform](webhook.url, summary).catch(() => {});
 }

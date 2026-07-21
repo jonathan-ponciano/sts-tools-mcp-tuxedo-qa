@@ -28,6 +28,7 @@ export interface TestEntry {
   last_status: TestStatus;
   last_run_at?: string;
   enabled: boolean;
+  validated: boolean;
   schedule?: string;
   name?: string;
   description?: string;
@@ -56,6 +57,9 @@ export function listTests(input: ListTestsInput = {}): TestEntry[] {
       last_status,
       last_run_at: lastRun?.run_at,
       enabled: meta?.enabled ?? true,
+      // Missing `validated` (tests saved before this field existed) counts
+      // as already trusted — same grandfathering rule as the scheduler.
+      validated: meta?.validated !== false,
       schedule: meta?.schedule,
       name: meta?.name,
       description: meta?.description,

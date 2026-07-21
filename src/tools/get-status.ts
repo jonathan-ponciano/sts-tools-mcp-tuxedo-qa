@@ -84,6 +84,10 @@ export function getStatus(input: GetStatusInput = {}): string {
     if (meta?.schedule) lines.push(`Schedule: every ${meta.schedule}`);
     if (meta?.tags?.length) lines.push(`Tags: ${meta.tags.join(', ')}`);
     if (meta?.enabled === false) lines.push('State: DISABLED');
+    if (meta?.validated === false) {
+      lines.push('State: DRAFT — not yet validated, so it will NOT run on its own schedule or notify the webhook.');
+      lines.push('Run it manually and confirm the result, then update_test with validated: true to enable automatic monitoring.');
+    }
 
     if (failure) {
       lines.push('');

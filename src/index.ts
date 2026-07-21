@@ -188,7 +188,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         } else {
           result = tests
             .map((t) => {
-              const status = t.enabled ? t.last_status.toUpperCase() : 'DISABLED';
+              const status = !t.enabled ? 'DISABLED' : !t.validated ? 'DRAFT — unvalidated, not auto-scheduled' : t.last_status.toUpperCase();
               const schedule = t.schedule ? ` [${t.schedule}]` : '';
               const ran = t.last_run_at ? ` (last run: ${t.last_run_at})` : '';
               const label = t.name ? `${t.name} (${t.file})` : t.file;

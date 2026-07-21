@@ -23,6 +23,16 @@ export const updateTestSchema = z.object({
     .string()
     .optional()
     .describe('Credential set label to inject as credentials.* in the test (e.g. "meuapp-prod")'),
+  validated: z
+    .boolean()
+    .optional()
+    .describe(
+      'Set true ONLY after a human has manually run this test and confirmed the result looks right — ' +
+        'this is what allows the scheduler/webhook to pick it up automatically. Never set this on your own ' +
+        'inference (e.g. "the dry-run passed so it must be fine"); ask the user first. Ignored if test_code ' +
+        'is also being changed in this same call — a code edit always resets validated to false, since the ' +
+        'edited version hasn\'t been reviewed yet.',
+    ),
 });
 
 export type UpdateTestInput = z.infer<typeof updateTestSchema>;
@@ -31,7 +41,7 @@ export type UpdateTestInput = z.infer<typeof updateTestSchema>;
 // always scoped to a single project via its own TUXEDO_QA_PROJECT.
 export async function updateTest(input: UpdateTestInput, project?: string | null): Promise<string> {
   const p = project !== undefined ? project : CURRENT_PROJECT;
-  const { name, test_code, display_name, description, schedule, enabled, credential } = input;
+  const { name, test_code, display_name, description, schedule, enabled, credential, validated } = input;
   const safeName = basename(name).replace(/\.spec\.ts$/, '');
   const filename = `${safeName}.spec.ts`;
   const filePath = join(testsDirFor(p), filename);
@@ -42,6 +52,7 @@ export async function updateTest(input: UpdateTestInput, project?: string | null
   }
 
   const changes: string[] = [];
+  let codeChanged = false;
 
   if (test_code !== undefined) {
     // Same dry-run-then-promote-or-discard idea as create_test — except
@@ -71,6 +82,7 @@ export async function updateTest(input: UpdateTestInput, project?: string | null
     }
 
     changes.push('script');
+    codeChanged = true;
   }
 
   const metaUpdates: Record<string, unknown> = {};
@@ -79,6 +91,16 @@ export async function updateTest(input: UpdateTestInput, project?: string | null
   if (schedule !== undefined) { metaUpdates.schedule = schedule; changes.push('schedule'); }
   if (enabled !== undefined) { metaUpdates.enabled = enabled; changes.push('enabled'); }
   if (credential !== undefined) { metaUpdates.credential = credential; changes.push('credential'); }
+
+  if (codeChanged) {
+    // A just-edited test hasn't been reviewed in its new form yet — back to
+    // sandboxed, no matter what `validated` was passed as.
+    metaUpdates.validated = false;
+    changes.push('validated (reset to false — code changed, needs re-review)');
+  } else if (validated !== undefined) {
+    metaUpdates.validated = validated;
+    changes.push('validated');
+  }
 
   if (Object.keys(metaUpdates).length > 0) {
     upsertTestMeta(filename, metaUpdates as Parameters<typeof upsertTestMeta>[1], configDir);

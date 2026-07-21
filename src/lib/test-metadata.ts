@@ -9,6 +9,14 @@ export interface TestMeta {
   tags?: string[];
   credential?: string;
   enabled: boolean;
+  // Sandbox gate: a brand-new test defaults to false, which keeps the
+  // scheduler from ever picking it up automatically and keeps webhook
+  // notifications quiet for it — regardless of `enabled`/`schedule`. Only a
+  // human explicitly validating it (dashboard "Validar" button, or
+  // confirming in chat) flips this to true. Manual runs (dashboard "Rodar",
+  // run_tests, run_until_pass) work on unvalidated tests same as always —
+  // that's how a human validates one in the first place.
+  validated: boolean;
   created_at: string;
   updated_at: string;
   last_run_at?: string;
@@ -43,7 +51,7 @@ export function upsertTestMeta(
 ): TestMeta {
   const store = load(configDir);
   const now = new Date().toISOString();
-  const existing = store[filename] ?? { enabled: true, created_at: now, updated_at: now };
+  const existing = store[filename] ?? { enabled: true, validated: false, created_at: now, updated_at: now };
   const merged = { ...existing, ...updates, updated_at: now };
   store[filename] = merged;
   save(store, configDir);

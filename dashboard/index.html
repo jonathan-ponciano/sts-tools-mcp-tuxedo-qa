@@ -236,6 +236,10 @@
           class="px-3 py-1 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
           ▶ Rodar
         </button>
+        <button id="btn-modal-validate" onclick="validateTest()"
+          class="hidden px-3 py-1 text-xs font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600">
+          ✓ Validar
+        </button>
         <button id="btn-modal-toggle" onclick="toggleTest()"
           class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
         </button>
@@ -248,6 +252,12 @@
     </div>
 
     <div class="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+      <!-- Sandbox banner -->
+      <div id="modal-sandbox-banner" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+        Rascunho — este teste não roda sozinho ainda (nem manda alerta no webhook), mesmo com schedule configurado.
+        Rode manualmente com "Rodar", confira se o resultado faz sentido, e clique em "Validar" pra ativar o monitoramento automático.
+      </div>
+
       <!-- Meta -->
       <div>
         <label class="block text-xs text-gray-500 mb-1">Nome de exibição</label>
@@ -579,6 +589,7 @@ function renderTests() {
       <div class="min-w-0">
         <div class="flex items-center gap-3">
           <span class="badge-${t.status} text-xs font-medium px-2 py-0.5 rounded-full">${t.status}</span>
+          ${t.validated === false ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title="Rascunho — valide pra ativar monitoramento automático e webhook">rascunho</span>' : ''}
           ${t.running ? '<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 animate-pulse">rodando</span>' : ''}
           <span class="text-sm font-medium" title="${t.filename}">${t.name || t.filename}</span>
           ${t.name ? `<span class="text-xs text-gray-400 font-mono">${t.filename}</span>` : ''}
@@ -587,7 +598,7 @@ function renderTests() {
         </div>
         ${t.description ? `<p class="text-xs text-gray-400 mt-0.5 truncate">${t.description}</p>` : ''}
       </div>
-      <span class="text-xs text-gray-400 shrink-0 ml-3">${t.schedule ?? '—'}${t.next_run_at ? ' · próx. ' + fmtRelative(t.next_run_at) : ''}</span>
+      <span class="text-xs text-gray-400 shrink-0 ml-3">${t.schedule ?? '—'}${t.validated === false ? ' · aguardando validação' : t.next_run_at ? ' · próx. ' + fmtRelative(t.next_run_at) : ''}</span>
     </div>
   `).join('');
 }
@@ -735,6 +746,10 @@ async function openTest(name) {
   const enabled = r.meta?.enabled !== false;
   document.getElementById('btn-modal-toggle').textContent = enabled ? 'Desativar' : 'Ativar';
 
+  const isValidated = r.meta?.validated !== false;
+  document.getElementById('modal-sandbox-banner').classList.toggle('hidden', isValidated);
+  document.getElementById('btn-modal-validate').classList.toggle('hidden', isValidated);
+
   // failure
   const failEl = document.getElementById('modal-failure');
   const shotWrap = document.getElementById('modal-failure-screenshot-wrap');
@@ -832,6 +847,17 @@ async function toggleTest() {
   }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
   if (!r.error) { closeModal('modal-test'); loadTests(); }
+}
+
+async function validateTest() {
+  if (!_currentTest) return;
+  if (!confirm('Confirma que já rodou esse teste manualmente e o resultado está correto? Isso ativa o monitoramento automático (schedule) e o webhook pra ele.')) return;
+  const r = await apiFetch(`/api/tests/${_currentTest.filename}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ validated: true }),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (!r.error) { await openTest(_currentTest.filename); loadTests(); }
 }
 
 async function deleteTest() {

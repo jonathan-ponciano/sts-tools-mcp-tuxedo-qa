@@ -31,7 +31,11 @@ let lastCheckedAt: string | null = null;
 let started = false;
 
 export function nextRunAt(meta: TestMeta): string | null {
-  if (!meta.schedule || meta.enabled === false) return null;
+  // `validated` is undefined on tests saved before this field existed —
+  // treat that as "already trusted" (grandfathered in) so upgrading doesn't
+  // silently stop monitoring tests that were already running fine. Only an
+  // *explicit* false (new tests default to this) blocks auto-scheduling.
+  if (!meta.schedule || meta.enabled === false || meta.validated === false) return null;
   const intervalMs = SCHEDULE_MS[meta.schedule];
   const last = meta.last_run_at ? new Date(meta.last_run_at).getTime() : 0;
   return new Date(last + intervalMs).toISOString();
@@ -64,7 +68,7 @@ async function runDueTest(project: string | null, file: string): Promise<void> {
     const summary = readLastRun(lastRunFor(project));
     upsertTestMeta(file, { last_run_at: summary?.run_at ?? new Date().toISOString() }, configDir);
 
-    await notifyIfConfigured(configDir, summary);
+    await notifyIfConfigured(configDir, summary, [file]);
   } catch {
     // a spawn failure here just means this test stays "due" and gets
     // retried on the next check — nothing to record.

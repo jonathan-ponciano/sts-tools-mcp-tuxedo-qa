@@ -47,7 +47,7 @@ async function runOneFile(
   configDir: string,
   lastRunPath: string,
   project: string | null,
-): Promise<{ exitCode: number; output: string; summary: RunSummary | null }> {
+): Promise<{ exitCode: number; output: string; summary: RunSummary | null; involvedFiles: string[] }> {
   const filename = basename(testFile.endsWith('.spec.ts') ? testFile : `${testFile}.spec.ts`);
   const credentialLabel = getTestMeta(filename, configDir)?.credential;
 
@@ -55,7 +55,7 @@ async function runOneFile(
   const summary = readLastRun(lastRunPath);
   upsertTestMeta(filename, { last_run_at: summary?.run_at ?? new Date().toISOString() }, configDir);
 
-  return { exitCode, output, summary };
+  return { exitCode, output, summary, involvedFiles: [filename] };
 }
 
 // Runs every enabled test file one at a time — each gets its own credential
@@ -68,8 +68,8 @@ async function runAllEnabledFiles(
   configDir: string,
   lastRunPath: string,
   project: string | null,
-): Promise<{ exitCode: number; output: string; summary: RunSummary | null }> {
-  if (!existsSync(testsDir)) return { exitCode: 1, output: 'No tests directory found.', summary: null };
+): Promise<{ exitCode: number; output: string; summary: RunSummary | null; involvedFiles: string[] }> {
+  if (!existsSync(testsDir)) return { exitCode: 1, output: 'No tests directory found.', summary: null, involvedFiles: [] };
 
   const meta = getAllMeta(configDir);
   const files = readdirSync(testsDir)
@@ -93,7 +93,7 @@ async function runAllEnabledFiles(
   const mergedLog = outputs.join('\n\n');
   writeFileSync(lastRunLogFor(project), mergedLog, 'utf-8');
 
-  if (summaries.length === 0) return { exitCode: lastExitCode, output: mergedLog, summary: null };
+  if (summaries.length === 0) return { exitCode: lastExitCode, output: mergedLog, summary: null, involvedFiles: files };
 
   const merged: RunSummary = {
     run_at: summaries[0].run_at,
@@ -108,7 +108,7 @@ async function runAllEnabledFiles(
   // (dashboard, get_status) sees the whole batch, not just the last file.
   writeFileSync(lastRunPath, JSON.stringify(merged, null, 2), 'utf-8');
 
-  return { exitCode: merged.failed > 0 ? 1 : 0, output: mergedLog, summary: merged };
+  return { exitCode: merged.failed > 0 ? 1 : 0, output: mergedLog, summary: merged, involvedFiles: files };
 }
 
 // `project` is only ever passed by the dashboard — an MCP connection is
@@ -142,11 +142,11 @@ export async function runTests(input: RunTestsInput, project?: string | null): P
     : runAllEnabledFiles(testsDir, configDir, lastRunPath, p);
 
   if (!waitForResult) {
-    run().then(({ summary }) => notifyIfConfigured(configDir, summary));
+    run().then(({ summary, involvedFiles }) => notifyIfConfigured(configDir, summary, involvedFiles));
     return 'Test run started in background. Use get_status to check results.';
   }
 
-  const { exitCode, output, summary } = await run();
-  await notifyIfConfigured(configDir, summary);
+  const { exitCode, output, summary, involvedFiles } = await run();
+  await notifyIfConfigured(configDir, summary, involvedFiles);
   return formatSummary(summary, exitCode, output);
 }

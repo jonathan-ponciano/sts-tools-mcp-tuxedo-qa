@@ -236,10 +236,10 @@
       <table>
         <thead><tr><th>Ferramenta</th><th>O que faz</th></tr></thead>
         <tbody>
-          <tr><td><code>create_test</code></td><td>Cria um novo arquivo de teste Playwright a partir do código gerado.</td></tr>
+          <tr><td><code>create_test</code></td><td>Cria um novo arquivo de teste Playwright a partir do código gerado. Fica em modo sandbox (não roda sozinho, sem alertar webhook) até ser validado manualmente.</td></tr>
           <tr><td><code>list_tests</code></td><td>Lista todos os testes com o último status conhecido; filtra por status ou limite.</td></tr>
           <tr><td><code>read_test</code></td><td>Lê o conteúdo de um arquivo de teste.</td></tr>
-          <tr><td><code>update_test</code></td><td>Atualiza script, nome de exibição, descrição, schedule ou estado (ativo/inativo) de um teste.</td></tr>
+          <tr><td><code>update_test</code></td><td>Atualiza script (com dry-run — edição ruim é rejeitada e o código anterior é restaurado), nome de exibição, descrição, schedule, credencial, estado (ativo/inativo) ou validação de um teste.</td></tr>
           <tr><td><code>delete_test</code></td><td>Apaga um teste e seu histórico permanentemente. Prefira desativar via <code>update_test</code>.</td></tr>
           <tr><td><code>run_tests</code></td><td>Roda todos os testes ou um arquivo específico; respeita o estado de pausa; notifica o webhook configurado.</td></tr>
           <tr><td><code>run_until_pass</code></td><td>Roda um teste repetidamente, aplicando correções entre tentativas, até passar ou atingir o limite de tentativas.</td></tr>

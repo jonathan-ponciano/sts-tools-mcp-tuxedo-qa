@@ -73,12 +73,22 @@ export async function createTest(input: CreateTestInput, project?: string | null
         ...(input.display_name ? { name: input.display_name } : {}),
         ...(input.description ? { description: input.description } : {}),
         enabled: true,
+        // Sandboxed until a human validates it — the scheduler won't pick
+        // this up and the webhook stays quiet for it, no matter the
+        // schedule, until someone runs it manually and confirms it's good
+        // (dashboard "Validar", or update_test with validated: true).
+        validated: false,
       }, configDirFor(p));
 
       const parts = [`Test created and dry-run passed: ${finalPath}`];
       if (input.display_name) parts.push(`Name: ${input.display_name}`);
       if (input.schedule) parts.push(`Schedule: every ${input.schedule}`);
       if (input.tags?.length) parts.push(`Tags: ${input.tags.join(', ')}`);
+      parts.push(
+        'Sandboxed: this test is unvalidated, so it will NOT run automatically yet — ' +
+          'run it manually (run_tests, or "Rodar" in the dashboard) and confirm the result looks right, ' +
+          'then mark it validated (update_test with validated: true, or "Validar" in the dashboard) to enable scheduling and webhook alerts for it.',
+      );
       return parts.join('\n');
     }
 

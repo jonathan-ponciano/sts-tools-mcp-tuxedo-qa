@@ -3,8 +3,7 @@ import { basename } from 'path';
 import { z } from 'zod';
 import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun, type RunSummary } from '../lib/results-store.js';
-import { sendDiscordWebhook } from '../lib/discord-webhook.js';
-import { readWebhook } from '../lib/webhook-store.js';
+import { notifyIfConfigured } from '../lib/webhook-store.js';
 import { testsDirFor, configDirFor, lastRunFor, lastRunLogFor, CURRENT_PROJECT } from '../lib/paths.js';
 import { isTestsPaused } from './pause-tests.js';
 import { getAllMeta, getTestMeta, upsertTestMeta } from '../lib/test-metadata.js';
@@ -40,13 +39,6 @@ function formatSummary(summary: RunSummary | null, exitCode: number, output: str
   }
 
   return lines.join('\n');
-}
-
-async function notifyWebhook(summary: RunSummary | null, configDir: string): Promise<void> {
-  const webhook = readWebhook(configDir);
-  if (!webhook || !summary) return;
-  const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
-  if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});
 }
 
 // Runs one specific test file, credential included.
@@ -150,11 +142,11 @@ export async function runTests(input: RunTestsInput, project?: string | null): P
     : runAllEnabledFiles(testsDir, configDir, lastRunPath, p);
 
   if (!waitForResult) {
-    run().then(({ summary }) => notifyWebhook(summary, configDir));
+    run().then(({ summary }) => notifyIfConfigured(configDir, summary));
     return 'Test run started in background. Use get_status to check results.';
   }
 
   const { exitCode, output, summary } = await run();
-  await notifyWebhook(summary, configDir);
+  await notifyIfConfigured(configDir, summary);
   return formatSummary(summary, exitCode, output);
 }

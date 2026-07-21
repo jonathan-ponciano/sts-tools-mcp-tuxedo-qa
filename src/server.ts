@@ -123,14 +123,18 @@ app.delete('/api/projects/:slug', (req, res) => {
 // ── Webhook ───────────────────────────────────────────────────────────────────
 app.get('/api/webhook', (req, res) => {
   const webhook = readWebhook(configDirFor(projectFrom(req)));
-  if (!webhook) return res.json({ url: null, events: 'failure' });
-  res.json({ url: maskValue(webhook.url), events: webhook.events });
+  if (!webhook) return res.json({ url: null, events: 'failure', platform: 'discord' });
+  res.json({ url: maskValue(webhook.url), events: webhook.events, platform: webhook.platform });
 });
 
 app.put('/api/webhook', (req, res) => {
   try {
-    const { url, events } = req.body as { url: string; events?: 'failure' | 'all' };
-    const result = setWebhook({ url, events: events ?? 'failure' }, projectFrom(req));
+    const { url, events, platform } = req.body as {
+      url: string;
+      events?: 'failure' | 'all';
+      platform?: 'discord' | 'slack' | 'generic';
+    };
+    const result = setWebhook({ url, events: events ?? 'failure', platform }, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -237,9 +241,9 @@ app.post('/api/tests', async (req, res) => {
   }
 });
 
-app.put('/api/tests/:name', (req, res) => {
+app.put('/api/tests/:name', async (req, res) => {
   try {
-    const result = updateTest({ name: req.params.name, ...req.body }, projectFrom(req));
+    const result = await updateTest({ name: req.params.name, ...req.body }, projectFrom(req));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });

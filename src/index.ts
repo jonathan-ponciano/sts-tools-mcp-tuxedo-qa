@@ -97,7 +97,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'run_tests',
-      description: 'Run all tests or a specific test file. Respects pause state. Sends Discord notification if webhook is configured.',
+      description: 'Run all tests or a specific test file. Respects pause state. Sends a webhook notification if one is configured.',
       inputSchema: zodToJsonSchema(runTestsSchema),
     },
     {
@@ -117,7 +117,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'set_webhook',
-      description: 'Configure the Discord webhook URL for test notifications.',
+      description: 'Configure a webhook URL (Discord, Slack, or a generic JSON endpoint) for test notifications.',
       inputSchema: zodToJsonSchema(setWebhookSchema),
     },
     {
@@ -206,7 +206,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case 'update_test': {
         const input = updateTestSchema.parse(args);
-        result = updateTest(input);
+        result = await updateTest(input);
         break;
       }
       case 'delete_test': {

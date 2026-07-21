@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
-import { ROOT, CURRENT_PROJECT, configDirFor, resultsDirFor, lastRunFor, lastRunLogFor } from './paths.js';
+import { ROOT, CURRENT_PROJECT, configDirFor, resultsDirFor, lastRunFor, lastRunLogFor, dryRunFor, dryRunLogFor } from './paths.js';
 import { readCredentials } from './credentials-store.js';
 import { readProtection, buildExtraHeaders } from './protection-store.js';
 import { appendHistory } from './run-history.js';
@@ -13,6 +13,12 @@ export interface RunOptions {
   // own TUXEDO_QA_PROJECT — the scheduler overrides it per-project since one
   // dashboard process checks every project's schedule, not just its own.
   project?: string | null;
+  // create_test/update_test validating a test before saving it. Redirects
+  // output to dry-run.json/.log (via TUXEDO_IS_DRY_RUN, read by
+  // playwright.config.ts) and skips run-history — this isn't a real
+  // monitored run and must not corrupt the suite's last-known status or
+  // uptime%.
+  dryRun?: boolean;
 }
 
 export interface RunResult {
@@ -44,6 +50,7 @@ async function runPlaywrightNow(opts: RunOptions = {}): Promise<RunResult> {
 
   const extraEnv: Record<string, string> = { TUXEDO_IS_TEST_RUN: 'true' };
   if (project) extraEnv.TUXEDO_QA_PROJECT = project;
+  if (opts.dryRun) extraEnv.TUXEDO_IS_DRY_RUN = 'true';
 
   if (opts.credentialLabel) {
     const all = readCredentials(configDir);
@@ -74,10 +81,12 @@ async function runPlaywrightNow(opts: RunOptions = {}): Promise<RunResult> {
       // piped), but strip any that slip through anyway — this log is meant
       // to be read as plain text in the dashboard.
       const fullOutput = output.join('').replace(/\x1b\[[0-9;]*m/g, '');
-      writeFileSync(lastRunLogFor(project), fullOutput, 'utf-8');
+      writeFileSync(opts.dryRun ? dryRunLogFor(project) : lastRunLogFor(project), fullOutput, 'utf-8');
 
-      const summary = readLastRun(lastRunFor(project));
-      if (summary) appendHistory(summary, configDir);
+      if (!opts.dryRun) {
+        const summary = readLastRun(lastRunFor(project));
+        if (summary) appendHistory(summary, configDir);
+      }
       resolve({ exitCode: code ?? 1, output: fullOutput });
     });
   });

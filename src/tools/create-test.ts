@@ -1,7 +1,7 @@
 import { writeFileSync, existsSync, renameSync, unlinkSync } from 'fs';
 import { join, basename } from 'path';
 import { z } from 'zod';
-import { testsDirFor, configDirFor, lastRunFor, ensureProjectReady, CURRENT_PROJECT } from '../lib/paths.js';
+import { testsDirFor, configDirFor, dryRunFor, ensureProjectReady, CURRENT_PROJECT } from '../lib/paths.js';
 import { upsertTestMeta } from '../lib/test-metadata.js';
 import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun } from '../lib/results-store.js';
@@ -57,8 +57,8 @@ export async function createTest(input: CreateTestInput, project?: string | null
 
   let dryRunResult: string;
   try {
-    const { exitCode } = await runPlaywright({ testFile: dryRunFilename, credentialLabel: input.credential, project: p });
-    const summary = readLastRun(lastRunFor(p));
+    const { exitCode } = await runPlaywright({ testFile: dryRunFilename, credentialLabel: input.credential, project: p, dryRun: true });
+    const summary = readLastRun(dryRunFor(p));
 
     const dryRunFailure = summary?.failures.find((f) => basename(f.file) === dryRunFilename);
 

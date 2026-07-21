@@ -13,10 +13,17 @@ const extraHTTPHeaders = process.env.TUXEDO_EXTRA_HEADERS
 const project = process.env.TUXEDO_QA_PROJECT?.replace(/[^a-zA-Z0-9_-]/g, '') || null;
 const namespace = project ? join(__dirname, 'projects', project) : __dirname;
 
+// Mirrors src/lib/paths.ts dryRunFor() — create_test/update_test validate a
+// test by actually running it before saving. That run must not land in
+// last-run.json (it isn't a real monitored run), or it'd overwrite the
+// suite's real last-known status and get counted into run-history's uptime%.
+const isDryRun = process.env.TUXEDO_IS_DRY_RUN === 'true';
+const resultsFilename = isDryRun ? 'dry-run.json' : 'last-run.json';
+
 export default defineConfig({
   testDir: join(namespace, 'tests'),
   reporter: [
-    ['json', { outputFile: join(namespace, 'results', 'last-run.json') }],
+    ['json', { outputFile: join(namespace, 'results', resultsFilename) }],
     ['list'],
   ],
   use: {

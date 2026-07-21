@@ -11,8 +11,7 @@ import { getAllMeta, upsertTestMeta, type TestMeta } from './test-metadata.js';
 import { isTestsPaused } from '../tools/pause-tests.js';
 import { runPlaywright } from './playwright-runner.js';
 import { readLastRun } from './results-store.js';
-import { sendDiscordWebhook } from './discord-webhook.js';
-import { readWebhook } from './webhook-store.js';
+import { notifyIfConfigured } from './webhook-store.js';
 
 const SCHEDULE_MS: Record<NonNullable<TestMeta['schedule']>, number> = {
   '1h': 60 * 60 * 1000,
@@ -65,11 +64,7 @@ async function runDueTest(project: string | null, file: string): Promise<void> {
     const summary = readLastRun(lastRunFor(project));
     upsertTestMeta(file, { last_run_at: summary?.run_at ?? new Date().toISOString() }, configDir);
 
-    const webhook = readWebhook(configDir);
-    if (webhook && summary) {
-      const shouldNotify = webhook.events === 'all' || (webhook.events === 'failure' && summary.failed > 0);
-      if (shouldNotify) await sendDiscordWebhook(webhook.url, summary).catch(() => {});
-    }
+    await notifyIfConfigured(configDir, summary);
   } catch {
     // a spawn failure here just means this test stays "due" and gets
     // retried on the next check — nothing to record.

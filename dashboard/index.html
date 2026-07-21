@@ -97,13 +97,14 @@
 
   <!-- ── TESTES ── -->
   <div id="panel-tests" class="hidden">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-3">
       <h2 class="text-sm font-semibold text-gray-700">Testes configurados</h2>
       <button onclick="openCreateModal()"
         class="px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition">
         + Novo teste
       </button>
     </div>
+    <div id="tag-filter-bar" class="flex flex-wrap gap-1.5 mb-3"></div>
     <div id="tests-list" class="space-y-2"></div>
   </div>
 
@@ -166,20 +167,31 @@
 
   <!-- ── WEBHOOK ── -->
   <div id="panel-webhook" class="hidden">
-    <h2 class="text-sm font-semibold text-gray-700 mb-4">Notificações via webhook (Discord)</h2>
-    <p class="text-xs text-gray-500 mb-4">Toda execução notifica automaticamente esse webhook, com print da falha anexado quando houver.</p>
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Notificações via webhook</h2>
+    <p class="text-xs text-gray-500 mb-4">Toda execução notifica automaticamente esse webhook. Discord recebe print da falha anexado; Slack e genérico recebem só o texto/JSON.</p>
     <div class="bg-white border rounded-xl p-5 space-y-4 max-w-lg">
       <div>
-        <label class="block text-xs text-gray-500 mb-1">URL do webhook do Discord</label>
-        <input id="wh-url" type="text" placeholder="https://discord.com/api/webhooks/..." class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        <label class="block text-xs text-gray-500 mb-1">URL do webhook</label>
+        <input id="wh-url" type="text" placeholder="https://discord.com/api/webhooks/... ou https://hooks.slack.com/..." class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         <p id="wh-current" class="text-xs text-gray-400 mt-1"></p>
       </div>
-      <div>
-        <label class="block text-xs text-gray-500 mb-1">Notificar em</label>
-        <select id="wh-events" class="w-full border rounded-lg px-2 py-1.5 text-sm">
-          <option value="failure">Só quando falhar</option>
-          <option value="all">Toda execução</option>
-        </select>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Formato</label>
+          <select id="wh-platform" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+            <option value="">Auto-detectar pela URL</option>
+            <option value="discord">Discord</option>
+            <option value="slack">Slack</option>
+            <option value="generic">Genérico (JSON puro — Teams/e-mail/Zapier via intermediário)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Notificar em</label>
+          <select id="wh-events" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+            <option value="failure">Só quando falhar</option>
+            <option value="all">Toda execução</option>
+          </select>
+        </div>
       </div>
       <div class="flex justify-end">
         <button onclick="saveWebhook()" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
@@ -529,10 +541,39 @@ async function loadTests() {
   loadStatus();
 }
 
+let _activeTagFilter = null;
+
+function renderTagFilterBar() {
+  const bar = document.getElementById('tag-filter-bar');
+  const allTags = [...new Set(_tests.flatMap(t => t.tags ?? []))].sort();
+  if (!allTags.length) { bar.innerHTML = ''; return; }
+
+  const chip = (label, value, active) => `
+    <button onclick="setTagFilter(${value === null ? 'null' : `'${value}'`})"
+      class="px-2.5 py-1 rounded-full text-xs font-medium transition ${active ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">${label}</button>`;
+
+  bar.innerHTML = chip('Todos', null, _activeTagFilter === null) +
+    allTags.map((tag) => chip(tag, tag, _activeTagFilter === tag)).join('');
+}
+
+function setTagFilter(tag) {
+  _activeTagFilter = tag;
+  renderTests();
+}
+
 function renderTests() {
   const el = document.getElementById('tests-list');
+  renderTagFilterBar();
+
   if (!_tests.length) { el.innerHTML = '<p class="text-sm text-gray-400">Nenhum teste ainda.</p>'; return; }
-  el.innerHTML = _tests.map(t => `
+
+  const visible = _activeTagFilter ? _tests.filter((t) => t.tags?.includes(_activeTagFilter)) : _tests;
+  if (!visible.length) {
+    el.innerHTML = `<p class="text-sm text-gray-400">Nenhum teste com a tag "${_activeTagFilter}".</p>`;
+    return;
+  }
+
+  el.innerHTML = visible.map(t => `
     <div onclick="openTest('${t.filename}')"
       class="flex items-center justify-between bg-white border rounded-xl px-4 py-3 cursor-pointer hover:border-indigo-300 transition">
       <div class="min-w-0">
@@ -542,7 +583,7 @@ function renderTests() {
           <span class="text-sm font-medium" title="${t.filename}">${t.name || t.filename}</span>
           ${t.name ? `<span class="text-xs text-gray-400 font-mono">${t.filename}</span>` : ''}
           ${t.credential ? `<span class="text-xs text-gray-400">🔑 ${t.credential}</span>` : ''}
-          ${t.tags?.length ? `<span class="text-xs text-gray-400">${t.tags.join(', ')}</span>` : ''}
+          ${t.tags?.length ? `<span class="text-xs text-gray-400">${t.tags.map((tag) => `<span onclick="event.stopPropagation(); setTagFilter('${tag}')" class="hover:text-indigo-600 hover:underline cursor-pointer">${tag}</span>`).join(', ')}</span>` : ''}
         </div>
         ${t.description ? `<p class="text-xs text-gray-400 mt-0.5 truncate">${t.description}</p>` : ''}
       </div>
@@ -1048,20 +1089,22 @@ async function saveStatusPage() {
 
 // ── Webhook ───────────────────────────────────────────────────────────────────
 async function loadWebhook() {
-  const r = await apiFetch(`/api/webhook`).then(r => r.json()).catch(() => ({ url: null, events: 'failure' }));
+  const r = await apiFetch(`/api/webhook`).then(r => r.json()).catch(() => ({ url: null, events: 'failure', platform: 'discord' }));
   document.getElementById('wh-url').value = '';
   document.getElementById('wh-events').value = r.events ?? 'failure';
+  document.getElementById('wh-platform').value = '';
   const current = document.getElementById('wh-current');
-  current.textContent = r.url ? `Configurado: ${r.url} — preencha o campo acima só se quiser trocar.` : 'Nenhum webhook configurado ainda.';
+  current.textContent = r.url ? `Configurado: ${r.url} (${r.platform}) — preencha o campo acima só se quiser trocar.` : 'Nenhum webhook configurado ainda.';
 }
 
 async function saveWebhook() {
   const url = document.getElementById('wh-url').value.trim();
   const events = document.getElementById('wh-events').value;
+  const platform = document.getElementById('wh-platform').value || undefined;
   if (!url) { toast('Cole a URL do webhook pra salvar.', true); return; }
   const r = await apiFetch(`/api/webhook`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, events }),
+    body: JSON.stringify({ url, events, platform }),
   }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
   if (!r.error) loadWebhook();

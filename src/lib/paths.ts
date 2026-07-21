@@ -30,6 +30,14 @@ export function configDirFor(slug: string | null): string { return join(namespac
 export function lastRunFor(slug: string | null): string { return join(resultsDirFor(slug), 'last-run.json'); }
 export function lastRunLogFor(slug: string | null): string { return join(resultsDirFor(slug), 'last-run.log'); }
 
+// Dry-run invocations (create_test validating a new test, update_test
+// validating an edit) write here instead of last-run.json/last-run.log —
+// otherwise validating a test would clobber the real "last run" status and
+// get appended to run-history.json, corrupting the uptime% until the next
+// real run_tests call.
+export function dryRunFor(slug: string | null): string { return join(resultsDirFor(slug), 'dry-run.json'); }
+export function dryRunLogFor(slug: string | null): string { return join(resultsDirFor(slug), 'dry-run.log'); }
+
 // Test specs always import shared helpers the same way — `./helpers/xxx.js`
 // — regardless of project. For the default (unnamespaced) project that's
 // just ROOT/tests/helpers/, already on disk. A namespaced project's tests

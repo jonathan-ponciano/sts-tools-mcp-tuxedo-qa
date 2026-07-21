@@ -172,8 +172,8 @@
       </div>
       <div class="card">
         <span class="icon">📣</span>
-        <h3>Alertas no Discord</h3>
-        <p>Configure um webhook uma vez e toda execução posta o resultado (passou/falhou) direto no canal da sua equipe.</p>
+        <h3>Alertas via webhook</h3>
+        <p>Configure um webhook uma vez (Discord, Slack, ou um endpoint JSON genérico pra Teams/e-mail via Zapier) e toda execução posta o resultado (passou/falhou) direto no canal da sua equipe.</p>
       </div>
       <div class="card">
         <span class="icon">📊</span>
@@ -207,7 +207,7 @@
       <div class="usecase">
         <div class="num">2</div>
         <div><h3>Monitoramento sintético contínuo</h3>
-        <p>Agende fluxos críticos (login, checkout, captura de lead) pra rodar a cada hora e detectar falhas via Discord antes que os clientes percebam.</p></div>
+        <p>Agende fluxos críticos (login, checkout, captura de lead) pra rodar a cada hora e detectar falhas via webhook antes que os clientes percebam.</p></div>
       </div>
       <div class="usecase">
         <div class="num">3</div>
@@ -241,11 +241,11 @@
           <tr><td><code>read_test</code></td><td>Lê o conteúdo de um arquivo de teste.</td></tr>
           <tr><td><code>update_test</code></td><td>Atualiza script, nome de exibição, descrição, schedule ou estado (ativo/inativo) de um teste.</td></tr>
           <tr><td><code>delete_test</code></td><td>Apaga um teste e seu histórico permanentemente. Prefira desativar via <code>update_test</code>.</td></tr>
-          <tr><td><code>run_tests</code></td><td>Roda todos os testes ou um arquivo específico; respeita o estado de pausa; notifica o Discord se configurado.</td></tr>
+          <tr><td><code>run_tests</code></td><td>Roda todos os testes ou um arquivo específico; respeita o estado de pausa; notifica o webhook configurado.</td></tr>
           <tr><td><code>run_until_pass</code></td><td>Roda um teste repetidamente, aplicando correções entre tentativas, até passar ou atingir o limite de tentativas.</td></tr>
           <tr><td><code>get_status</code></td><td>Status geral da suíte, ou detalhe de falha e sugestões de correção por teste.</td></tr>
           <tr><td><code>pause_tests</code></td><td>Pausa toda a suíte por até 60 minutos — retoma automaticamente.</td></tr>
-          <tr><td><code>set_webhook</code></td><td>Configura a URL do webhook do Discord usada nas notificações de execução.</td></tr>
+          <tr><td><code>set_webhook</code></td><td>Configura a URL do webhook (Discord, Slack, ou JSON genérico) usada nas notificações de execução.</td></tr>
           <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado (campos chave-valor).</td></tr>
           <tr><td><code>list_credentials</code></td><td>Lista os conjuntos de credenciais salvos com valores mascarados.</td></tr>
           <tr><td><code>delete_credential</code></td><td>Apaga um conjunto de credenciais nomeado.</td></tr>

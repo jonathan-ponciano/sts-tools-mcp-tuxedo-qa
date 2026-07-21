@@ -138,7 +138,7 @@
 <section id="features">
   <div class="wrap">
     <h2>O que ele faz</h2>
-    <p class="section-sub">Um único servidor MCP, conectado ao Claude, Gemini ou qualquer cliente compatível com MCP, expondo 13 ferramentas que cobrem todo o ciclo de vida de uma suíte de testes sintéticos.</p>
+    <p class="section-sub">Um único servidor MCP, conectado ao Claude, Gemini ou qualquer cliente compatível com MCP, expondo 16 ferramentas que cobrem todo o ciclo de vida de uma suíte de testes sintéticos.</p>
     <div class="grid">
       <div class="card">
         <span class="icon">✍️</span>
@@ -188,7 +188,7 @@
       <div class="card">
         <span class="icon">🤖</span>
         <h3>Subagent dedicado (Claude Code)</h3>
-        <p>O instalador registra o subagent <code>tuxedo-qa-tester</code> globalmente — já sabe as 13 ferramentas e as convenções de teste do projeto, sem precisar reexplicar nada a cada conversa.</p>
+        <p>O instalador registra o subagent <code>tuxedo-qa-tester</code> globalmente — já sabe as 16 ferramentas e as convenções de teste do projeto, sem precisar reexplicar nada a cada conversa.</p>
       </div>
     </div>
   </div>
@@ -249,6 +249,9 @@
           <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado (campos chave-valor).</td></tr>
           <tr><td><code>list_credentials</code></td><td>Lista os conjuntos de credenciais salvos com valores mascarados.</td></tr>
           <tr><td><code>delete_credential</code></td><td>Apaga um conjunto de credenciais nomeado.</td></tr>
+          <tr><td><code>start_pair_debug</code></td><td>Abre um navegador visível pra você seguir um fluxo manualmente, gravando console, rede, erros e navegações com timestamp.</td></tr>
+          <tr><td><code>get_pair_debug_context</code></td><td>Retorna a linha do tempo gravada até agora na sessão de pair-debugging ativa.</td></tr>
+          <tr><td><code>stop_pair_debug</code></td><td>Encerra a sessão de pair-debugging e devolve a linha do tempo completa mais um rascunho de teste Playwright.</td></tr>
         </tbody>
       </table>
     </div>

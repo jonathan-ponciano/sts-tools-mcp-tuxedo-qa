@@ -9,7 +9,7 @@ e página pública de status.
 
 ## O que é
 
-O tuxedo-qa expõe 13 ferramentas MCP que cobrem todo o ciclo de vida de uma suíte de testes
+O tuxedo-qa expõe 16 ferramentas MCP que cobrem todo o ciclo de vida de uma suíte de testes
 sintéticos: escrever specs em linguagem natural, rodar sob demanda ou por agendamento,
 autocorrigir falhas, acessar ambientes de staging protegidos por headers, e expor os
 resultados numa página pública de status — tudo conduzido por uma conversa com seu
@@ -21,7 +21,7 @@ na landing page.
 ### Subagent do Claude Code
 
 O instalador também registra o subagent **`tuxedo-qa-tester`** (globalmente, em
-`~/.claude/agents/`) — ele já sabe as 13 ferramentas, as convenções de teste do projeto
+`~/.claude/agents/`) — ele já sabe as 16 ferramentas, as convenções de teste do projeto
 (usar o helper de credenciais em vez de senha fixa, `brasil.ts` pra CPF/CNPJ, `human-loop.ts`
 pra 2FA) e quando usar `run_until_pass` vs. corrigir manualmente. O Claude Code aciona ele
 sozinho quando a tarefa é sobre testes/QA; não precisa chamar por nome. (Só Claude Code por

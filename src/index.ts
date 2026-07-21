@@ -19,6 +19,9 @@ import { setWebhook, setWebhookSchema } from './tools/set-webhook.js';
 import { createCredential, createCredentialSchema } from './tools/create-credential.js';
 import { listCredentials } from './tools/list-credentials.js';
 import { deleteCredential, deleteCredentialSchema } from './tools/delete-credential.js';
+import { startPairDebug, startPairDebugSchema } from './tools/start-pair-debug.js';
+import { getPairDebugContext, getPairDebugContextSchema } from './tools/get-pair-debug-context.js';
+import { stopPairDebug, stopPairDebugSchema } from './tools/stop-pair-debug.js';
 
 const server = new Server(
   { name: 'tuxedo-qa', version: '2.0.0' },
@@ -139,6 +142,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: 'Delete a named credential set.',
       inputSchema: zodToJsonSchema(deleteCredentialSchema),
     },
+    {
+      name: 'start_pair_debug',
+      description:
+        'Start a pair-debugging session: opens a visible browser at the given URL for the human to drive by hand. ' +
+        'Records console messages, network errors, page exceptions, navigations, and their clicks/fills with timestamps ' +
+        'as they go, so you can correlate what they did with what broke. Use when the user wants to walk through a flow ' +
+        'live and have you spot the bug, rather than writing a scripted test upfront.',
+      inputSchema: zodToJsonSchema(startPairDebugSchema),
+    },
+    {
+      name: 'get_pair_debug_context',
+      description:
+        'Get the recorded timeline of the active pair-debugging session so far (console, network, errors, navigations, actions). ' +
+        'Call this whenever the user says something looks wrong, to see exactly what just happened.',
+      inputSchema: zodToJsonSchema(getPairDebugContextSchema),
+    },
+    {
+      name: 'stop_pair_debug',
+      description:
+        'End the active pair-debugging session: closes the browser and returns the full recorded timeline plus a draft ' +
+        'Playwright test built from the actions the human performed. Save it for real with create_test if it holds up.',
+      inputSchema: zodToJsonSchema(stopPairDebugSchema),
+    },
   ],
 }));
 
@@ -225,6 +251,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'delete_credential': {
         const input = deleteCredentialSchema.parse(args);
         result = deleteCredential(input);
+        break;
+      }
+      case 'start_pair_debug': {
+        const input = startPairDebugSchema.parse(args);
+        result = await startPairDebug(input);
+        break;
+      }
+      case 'get_pair_debug_context': {
+        getPairDebugContextSchema.parse(args);
+        result = getPairDebugContext();
+        break;
+      }
+      case 'stop_pair_debug': {
+        stopPairDebugSchema.parse(args);
+        result = await stopPairDebug();
         break;
       }
       default:

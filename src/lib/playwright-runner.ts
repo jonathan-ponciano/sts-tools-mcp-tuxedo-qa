@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
-import { mkdirSync } from 'fs';
-import { ROOT, CURRENT_PROJECT, configDirFor, resultsDirFor, lastRunFor } from './paths.js';
+import { mkdirSync, writeFileSync } from 'fs';
+import { ROOT, CURRENT_PROJECT, configDirFor, resultsDirFor, lastRunFor, lastRunLogFor } from './paths.js';
 import { readCredentials } from './credentials-store.js';
 import { readProtection, buildExtraHeaders } from './protection-store.js';
 import { appendHistory } from './run-history.js';
@@ -70,9 +70,15 @@ async function runPlaywrightNow(opts: RunOptions = {}): Promise<RunResult> {
     proc.stderr.on('data', (d: Buffer) => output.push(d.toString()));
 
     proc.on('close', (code) => {
+      // Playwright disables color codes when stdout isn't a TTY (our case,
+      // piped), but strip any that slip through anyway — this log is meant
+      // to be read as plain text in the dashboard.
+      const fullOutput = output.join('').replace(/\x1b\[[0-9;]*m/g, '');
+      writeFileSync(lastRunLogFor(project), fullOutput, 'utf-8');
+
       const summary = readLastRun(lastRunFor(project));
       if (summary) appendHistory(summary, configDir);
-      resolve({ exitCode: code ?? 1, output: output.join('') });
+      resolve({ exitCode: code ?? 1, output: fullOutput });
     });
   });
 }

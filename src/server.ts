@@ -1,5 +1,5 @@
 import express from 'express';
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, existsSync, readdirSync, mkdirSync, rmSync } from 'fs';
 
@@ -26,7 +26,10 @@ import {
   configDirFor,
   resultsDirFor,
   lastRunFor,
+  lastRunLogFor,
   ensureProjectReady,
+  ROOT,
+  PROJECTS_DIR,
 } from './lib/paths.js';
 import { startScheduler, getSchedulerState, nextRunAt } from './lib/scheduler.js';
 
@@ -138,6 +141,35 @@ app.put('/api/webhook', (req, res) => {
 app.get('/api/status', (req, res) => {
   const lastRun = readLastRun(lastRunFor(projectFrom(req)));
   res.json({ lastRun });
+});
+
+// ── Run log ───────────────────────────────────────────────────────────────────
+// Raw stdout/stderr of the last `npx playwright test` invocation for this
+// project — the step-by-step list-reporter output plus full error/call-log
+// detail that the summarized last-run.json intentionally drops.
+app.get('/api/logs', (req, res) => {
+  const logPath = lastRunLogFor(projectFrom(req));
+  const log = existsSync(logPath) ? readFileSync(logPath, 'utf-8') : '';
+  res.json({ log });
+});
+
+// ── Screenshot preview ─────────────────────────────────────────────────────────
+// Playwright captures a screenshot on failure (see playwright.config.ts) and
+// records its absolute path in results-store's TestFailure.screenshot_path.
+// Stream it back so the dashboard can show what the browser looked like —
+// guarded to paths actually under this install, never an arbitrary file.
+app.get('/api/screenshot', (req, res) => {
+  const raw = req.query.path as string | undefined;
+  if (!raw) return res.status(400).send('Missing path.');
+
+  const resolved = resolve(raw);
+  const allowedRoots = [resolve(ROOT), resolve(PROJECTS_DIR)];
+  if (!allowedRoots.some((root) => resolved === root || resolved.startsWith(root + '/'))) {
+    return res.status(403).send('Path not allowed.');
+  }
+  if (!existsSync(resolved)) return res.status(404).send('Screenshot not found.');
+
+  res.sendFile(resolved);
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

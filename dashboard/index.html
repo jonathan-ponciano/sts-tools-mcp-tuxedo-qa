@@ -32,6 +32,10 @@
     </div>
     <div id="status-bar" class="flex items-center gap-4 text-sm text-gray-500">
       <span id="status-summary">carregando...</span>
+      <button onclick="openGlobalLogs()"
+        class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 transition">
+        Ver logs
+      </button>
       <button onclick="runAll()" id="btn-run-all"
         class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition">
         ▶ Rodar todos
@@ -197,6 +201,19 @@
 
 </div>
 
+<!-- ── MODAL: logs da última execução (geral, todos os testes) ── -->
+<div id="modal-global-logs" class="fixed inset-0 bg-black/40 z-50 hidden flex items-start justify-center pt-10 px-4">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h3 class="font-semibold text-gray-900">Logs da última execução</h3>
+      <button onclick="closeModal('modal-global-logs')" class="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+    </div>
+    <div class="overflow-y-auto flex-1 px-5 py-4">
+      <pre id="global-logs-content" class="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs">carregando...</pre>
+    </div>
+  </div>
+</div>
+
 <!-- ── MODAL: detalhes/edição de teste ── -->
 <div id="modal-test" class="fixed inset-0 bg-black/40 z-50 hidden flex items-start justify-center pt-10 px-4">
   <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
@@ -248,9 +265,22 @@
       </div>
 
       <!-- Error box -->
-      <div id="modal-failure" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-        <div class="font-semibold mb-1" id="modal-failure-code"></div>
-        <pre id="modal-failure-msg"></pre>
+      <div id="modal-failure" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 space-y-2">
+        <div class="font-semibold" id="modal-failure-code"></div>
+        <pre id="modal-failure-msg" class="max-h-56 overflow-y-auto"></pre>
+        <div id="modal-failure-screenshot-wrap" class="hidden">
+          <div class="text-red-400 mb-1">Preview do navegador no momento da falha:</div>
+          <img id="modal-failure-screenshot" class="border border-red-200 rounded-lg max-w-full cursor-zoom-in"
+            onclick="window.open(this.src, '_blank')" />
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div>
+        <button type="button" onclick="toggleLogs()" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+          <span id="logs-toggle-label">▸ Ver logs completos da última execução</span>
+        </button>
+        <pre id="test-run-logs" class="hidden mt-2 bg-gray-900 text-gray-100 rounded-lg p-3 text-xs max-h-72 overflow-y-auto"></pre>
       </div>
 
       <!-- Code editor -->
@@ -666,18 +696,51 @@ async function openTest(name) {
 
   // failure
   const failEl = document.getElementById('modal-failure');
+  const shotWrap = document.getElementById('modal-failure-screenshot-wrap');
   if (r.failure) {
     document.getElementById('modal-failure-code').textContent = `[${r.failure.error_code}]`;
-    document.getElementById('modal-failure-msg').textContent = r.failure.error.split('\n')[0];
+    document.getElementById('modal-failure-msg').textContent = r.failure.error;
+    if (r.failure.screenshot_path) {
+      document.getElementById('modal-failure-screenshot').src = `${API}/api/screenshot?path=${encodeURIComponent(r.failure.screenshot_path)}`;
+      shotWrap.classList.remove('hidden');
+    } else {
+      shotWrap.classList.add('hidden');
+    }
     failEl.classList.remove('hidden');
   } else {
     failEl.classList.add('hidden');
+    shotWrap.classList.add('hidden');
   }
+
+  // logs — collapsed by default, (re)fetched lazily on toggle
+  _logsLoaded = false;
+  document.getElementById('test-run-logs').classList.add('hidden');
+  document.getElementById('test-run-logs').textContent = '';
+  document.getElementById('logs-toggle-label').textContent = '▸ Ver logs completos da última execução';
 
   // populate credential selector
   populateCredSelect('edit-credential', r.meta?.credential ?? '');
 
   document.getElementById('modal-test').classList.remove('hidden');
+}
+
+let _logsLoaded = false;
+
+async function toggleLogs() {
+  const pre = document.getElementById('test-run-logs');
+  const label = document.getElementById('logs-toggle-label');
+  const opening = pre.classList.contains('hidden');
+
+  if (opening && !_logsLoaded) {
+    pre.textContent = 'carregando...';
+    pre.classList.remove('hidden');
+    const r = await apiFetch(`/api/logs`).then(r => r.json()).catch(() => ({ log: '' }));
+    pre.textContent = r.log?.trim() ? r.log : 'Nenhum log de execução encontrado ainda.';
+    _logsLoaded = true;
+  }
+
+  pre.classList.toggle('hidden', !opening);
+  label.textContent = opening ? '▾ Ocultar logs completos' : '▸ Ver logs completos da última execução';
 }
 
 function populateCredSelect(selId, current) {
@@ -704,13 +767,19 @@ async function saveTest() {
 
 async function runTest() {
   if (!_currentTest) return;
+  const name = _currentTest.filename;
   setLoading('btn-modal-run', true);
   document.getElementById('modal-run-result').textContent = 'rodando...';
-  const r = await apiFetch(`/api/tests/${_currentTest.filename}/run`, { method: 'POST' }).then(r => r.json());
+  const r = await apiFetch(`/api/tests/${name}/run`, { method: 'POST' }).then(r => r.json());
   setLoading('btn-modal-run', false);
-  document.getElementById('modal-run-result').textContent = r.message?.split('\n')[0] ?? r.error;
   loadTests();
   loadStatus();
+
+  // refresh error/screenshot + force the log viewer to reload, so this run's
+  // detail shows up — not whatever was left over from before. openTest()
+  // resets modal-run-result, so re-set it after.
+  if (_currentTest?.filename === name) await openTest(name);
+  document.getElementById('modal-run-result').textContent = r.message?.split('\n')[0] ?? r.error;
 }
 
 async function toggleTest() {
@@ -776,6 +845,15 @@ async function runAll() {
   toast(r.message?.split('\n')[0] ?? r.error, !!r.error);
   loadTests();
   loadStatus();
+}
+
+// ── Global logs (last run, whichever test/run-all produced it) ───────────────
+async function openGlobalLogs() {
+  const pre = document.getElementById('global-logs-content');
+  pre.textContent = 'carregando...';
+  document.getElementById('modal-global-logs').classList.remove('hidden');
+  const r = await apiFetch(`/api/logs`).then(r => r.json()).catch(() => ({ log: '' }));
+  pre.textContent = r.log?.trim() ? r.log : 'Nenhum log de execução encontrado ainda.';
 }
 
 // ── Credentials ───────────────────────────────────────────────────────────────

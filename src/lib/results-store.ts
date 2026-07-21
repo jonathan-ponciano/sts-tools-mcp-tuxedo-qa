@@ -90,7 +90,10 @@ function collectFailures(suites: PWSuite[], parentFile = ''): TestFailure[] {
         for (const result of test.results) {
           if (result.status === 'passed') continue;
 
-          const error = result.error?.message ?? 'Unknown error';
+          // Playwright's error.message is pre-formatted for a color terminal
+          // (ANSI codes baked in even when nothing renders them) — strip so
+          // it's readable as plain text wherever it's shown or read back.
+          const error = (result.error?.message ?? 'Unknown error').replace(/\x1b\[[0-9;]*m/g, '');
           const screenshot = result.attachments.find(
             (a) => a.name === 'screenshot' && a.path,
           );

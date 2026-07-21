@@ -5,7 +5,7 @@ import { runPlaywright } from '../lib/playwright-runner.js';
 import { readLastRun, type RunSummary } from '../lib/results-store.js';
 import { sendDiscordWebhook } from '../lib/discord-webhook.js';
 import { readWebhook } from '../lib/webhook-store.js';
-import { testsDirFor, configDirFor, lastRunFor, CURRENT_PROJECT } from '../lib/paths.js';
+import { testsDirFor, configDirFor, lastRunFor, lastRunLogFor, CURRENT_PROJECT } from '../lib/paths.js';
 import { isTestsPaused } from './pause-tests.js';
 import { getAllMeta, getTestMeta, upsertTestMeta } from '../lib/test-metadata.js';
 
@@ -90,12 +90,18 @@ async function runAllEnabledFiles(
 
   for (const file of files) {
     const result = await runOneFile(file, configDir, lastRunPath, project);
-    outputs.push(result.output);
+    outputs.push(`=== ${file} ===\n${result.output}`);
     lastExitCode = result.exitCode;
     if (result.summary) summaries.push(result.summary);
   }
 
-  if (summaries.length === 0) return { exitCode: lastExitCode, output: outputs.join('\n'), summary: null };
+  // Each file's run overwrote last-run.log with just its own output (via
+  // playwright-runner) — replace it with the whole batch, labeled per file,
+  // so /api/logs after "run all" shows every test's steps, not just the last.
+  const mergedLog = outputs.join('\n\n');
+  writeFileSync(lastRunLogFor(project), mergedLog, 'utf-8');
+
+  if (summaries.length === 0) return { exitCode: lastExitCode, output: mergedLog, summary: null };
 
   const merged: RunSummary = {
     run_at: summaries[0].run_at,
@@ -110,7 +116,7 @@ async function runAllEnabledFiles(
   // (dashboard, get_status) sees the whole batch, not just the last file.
   writeFileSync(lastRunPath, JSON.stringify(merged, null, 2), 'utf-8');
 
-  return { exitCode: merged.failed > 0 ? 1 : 0, output: outputs.join('\n'), summary: merged };
+  return { exitCode: merged.failed > 0 ? 1 : 0, output: mergedLog, summary: merged };
 }
 
 // `project` is only ever passed by the dashboard — an MCP connection is

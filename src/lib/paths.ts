@@ -28,6 +28,7 @@ export function testsDirFor(slug: string | null): string { return join(namespace
 export function resultsDirFor(slug: string | null): string { return join(namespaceFor(slug), 'results'); }
 export function configDirFor(slug: string | null): string { return join(namespaceFor(slug), 'config'); }
 export function lastRunFor(slug: string | null): string { return join(resultsDirFor(slug), 'last-run.json'); }
+export function lastRunLogFor(slug: string | null): string { return join(resultsDirFor(slug), 'last-run.log'); }
 
 // Test specs always import shared helpers the same way — `./helpers/xxx.js`
 // — regardless of project. For the default (unnamespaced) project that's

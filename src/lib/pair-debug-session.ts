@@ -1,6 +1,9 @@
 import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'fs';
 import { readProtection, buildExtraHeaders } from './protection-store.js';
-import { CONFIG_DIR } from './paths.js';
+import { CONFIG_DIR, CURRENT_PROJECT, resultsDirFor, pairDebugFrameFor, pairDebugStatusFor } from './paths.js';
+
+const FRAME_INTERVAL_MS = 500;
 
 // A pair-debugging session: a visible browser the *human* drives by hand,
 // while we record everything around them — console, network, page errors,
@@ -35,6 +38,7 @@ interface Session {
   startUrl: string;
   events: RecordedEvent[];
   actions: RecordedAction[];
+  activePage: Page;
 }
 
 let session: Session | null = null;
@@ -99,6 +103,10 @@ function push(kind: EventKind, detail: Record<string, unknown>): void {
 }
 
 function attachPageListeners(page: Page): void {
+  // Whichever page most recently did something is the one worth showing live
+  // — covers the common case of a flow opening a new tab partway through.
+  if (session) session.activePage = page;
+
   page.on('console', (msg) => push('console', { type: msg.type(), text: msg.text() }));
   page.on('pageerror', (err) => push('pageerror', { message: err.message }));
   page.on('requestfailed', (req) => {
@@ -114,6 +122,42 @@ function attachPageListeners(page: Page): void {
   });
 }
 
+// Self-scheduling (not setInterval) on purpose — a screenshot can legitimately
+// take longer than FRAME_INTERVAL_MS (animations, slow page), and setInterval
+// would happily stack up overlapping captures in that case. Each tick waits
+// for the previous one to fully finish before scheduling the next — and the
+// loop simply stops rescheduling once `session` goes null (stopSession),
+// no separate timer handle to track/cancel.
+function scheduleNextFrame(): void {
+  if (!session) return;
+  setTimeout(() => { captureFrame().finally(scheduleNextFrame); }, FRAME_INTERVAL_MS);
+}
+
+async function captureFrame(): Promise<void> {
+  if (!session) return;
+  const project = CURRENT_PROJECT;
+
+  try {
+    // Generous internal timeout — a slow/animating page shouldn't spam
+    // failures, it should just mean this particular frame arrives late.
+    await session.activePage.screenshot({ path: pairDebugFrameFor(project), type: 'jpeg', quality: 60, timeout: 2000 });
+  } catch {
+    // page mid-navigation, closed, or briefly unresponsive — skip this tick,
+    // the next one will very likely succeed
+  }
+
+  try {
+    writeFileSync(pairDebugStatusFor(project), JSON.stringify({
+      active: true,
+      url: session.activePage.url(),
+      started_at: new Date(session.startedAt).toISOString(),
+    }), 'utf-8');
+  } catch {
+    // best-effort — a missed status tick just means the dashboard shows the
+    // previous one a little longer, not worth failing the session over
+  }
+}
+
 export async function startSession(url: string): Promise<void> {
   if (session) throw new Error('A pair-debugging session is already active. Call stop_pair_debug first.');
 
@@ -121,19 +165,24 @@ export async function startSession(url: string): Promise<void> {
   const extraHTTPHeaders = buildExtraHeaders(readProtection(CONFIG_DIR));
   const context = await browser.newContext({ extraHTTPHeaders });
 
-  session = { browser, context, startedAt: Date.now(), startUrl: url, events: [], actions: [] };
-
   await context.exposeFunction('__tuxedoRecordAction', (action: RecordedAction) => {
     session?.actions.push(action);
     push('action', action as unknown as Record<string, unknown>);
   });
   await context.addInitScript(RECORDER_INIT_SCRIPT);
-  // Registered before newPage() on purpose — this 'page' event also fires
-  // for the page created below, so that call must NOT attach listeners a
-  // second time (it used to, and every event was recorded twice).
-  context.on('page', attachPageListeners);
 
+  // Created before `session` exists so `activePage` can be a real Page from
+  // the start (no nullable placeholder) — listeners for it are attached
+  // manually right below instead of relying on the 'page' event, which is
+  // registered only *after*, for any tab opened later in the flow.
   const page = await context.newPage();
+
+  session = { browser, context, startedAt: Date.now(), startUrl: url, events: [], actions: [], activePage: page };
+
+  mkdirSync(resultsDirFor(CURRENT_PROJECT), { recursive: true });
+  attachPageListeners(page);
+  context.on('page', attachPageListeners);
+  scheduleNextFrame();
 
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -240,10 +289,18 @@ export async function stopSession(): Promise<string> {
 
   const timeline = buildTimeline();
   const draft = generateDraftTest();
+  const project = CURRENT_PROJECT;
 
   await session.context.close();
   await session.browser.close();
   session = null;
+
+  try {
+    writeFileSync(pairDebugStatusFor(project), JSON.stringify({ active: false }), 'utf-8');
+  } catch {
+    // best-effort — worst case the dashboard shows the last live frame as
+    // "active" for one extra poll before it notices the file didn't update
+  }
 
   return [
     timeline,

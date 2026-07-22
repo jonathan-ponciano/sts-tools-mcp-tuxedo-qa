@@ -38,6 +38,14 @@ export function lastRunLogFor(slug: string | null): string { return join(results
 export function dryRunFor(slug: string | null): string { return join(resultsDirFor(slug), 'dry-run.json'); }
 export function dryRunLogFor(slug: string | null): string { return join(resultsDirFor(slug), 'dry-run.log'); }
 
+// Pair-debugging live view hand-off: the MCP server process (where the
+// session/browser actually lives) and the dashboard process (which shows it)
+// are two separate Node processes that can't share memory — same file-based
+// IPC pattern as everything else here. The MCP side writes a frame + status
+// on an interval; the dashboard just reads whatever's there.
+export function pairDebugFrameFor(slug: string | null): string { return join(resultsDirFor(slug), 'pair-debug-live.jpg'); }
+export function pairDebugStatusFor(slug: string | null): string { return join(resultsDirFor(slug), 'pair-debug-status.json'); }
+
 // Test specs always import shared helpers the same way — `./helpers/xxx.js`
 // — regardless of project. For the default (unnamespaced) project that's
 // just ROOT/tests/helpers/, already on disk. A namespaced project's tests

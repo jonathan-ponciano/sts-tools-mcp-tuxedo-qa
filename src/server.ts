@@ -14,6 +14,7 @@ import { setWebhook } from './tools/set-webhook.js';
 import { readLastRun } from './lib/results-store.js';
 import { getAllMeta, getTestMeta } from './lib/test-metadata.js';
 import { readCredentials, maskValue } from './lib/credentials-store.js';
+import { readAgentConfig, writeAgentConfig, type AgentProvider } from './lib/agent-config-store.js';
 import { readCredentialRequests, resolveCredentialRequest } from './lib/credential-requests-store.js';
 import { readProtection, writeProtection } from './lib/protection-store.js';
 import { readStatusPage, writeStatusPage } from './lib/status-page-store.js';
@@ -28,6 +29,8 @@ import {
   resultsDirFor,
   lastRunFor,
   lastRunLogFor,
+  pairDebugFrameFor,
+  pairDebugStatusFor,
   ensureProjectReady,
   ROOT,
   PROJECTS_DIR,
@@ -142,6 +145,28 @@ app.put('/api/webhook', (req, res) => {
   }
 });
 
+// ── Agent config (scaffolding) ──────────────────────────────────────────────────
+// Not read by anything yet — no embedded agent exists in this codebase. Just
+// a place to store a provider API key ahead of time, same masked-on-read
+// pattern as credentials, so the settings UI isn't blocked on the agent
+// itself being built.
+app.get('/api/agent-config', (req, res) => {
+  const config = readAgentConfig(configDirFor(projectFrom(req)));
+  if (!config) return res.json({ provider: 'gemini', apiKey: null });
+  res.json({ provider: config.provider, apiKey: maskValue(config.apiKey) });
+});
+
+app.put('/api/agent-config', (req, res) => {
+  try {
+    const { provider, apiKey } = req.body as { provider: AgentProvider; apiKey: string };
+    if (!apiKey) return res.status(400).json({ error: 'API key é obrigatória.' });
+    writeAgentConfig({ provider, apiKey }, configDirFor(projectFrom(req)));
+    res.json({ message: `Chave de API salva (${provider}). Ainda não conectada a nenhum agente.` });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
 // ── Status ─────────────────────────────────────────────────────────────────────
 app.get('/api/status', (req, res) => {
   const lastRun = readLastRun(lastRunFor(projectFrom(req)));
@@ -175,6 +200,28 @@ app.get('/api/screenshot', (req, res) => {
   if (!existsSync(resolved)) return res.status(404).send('Screenshot not found.');
 
   res.sendFile(resolved);
+});
+
+// ── Pair-debugging live view ────────────────────────────────────────────────────
+// The session itself runs in the MCP server process (wherever start_pair_debug
+// was called from), not here — status.json/live.jpg are the file-based
+// hand-off between that process and this one, same pattern as everything
+// else cross-process in this app.
+app.get('/api/pair-debug/status', (req, res) => {
+  const file = pairDebugStatusFor(projectFrom(req));
+  if (!existsSync(file)) return res.json({ active: false });
+  try {
+    res.json(JSON.parse(readFileSync(file, 'utf-8')));
+  } catch {
+    res.json({ active: false });
+  }
+});
+
+app.get('/api/pair-debug/frame', (req, res) => {
+  const file = pairDebugFrameFor(projectFrom(req));
+  if (!existsSync(file)) return res.status(404).send('No frame yet.');
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(file);
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

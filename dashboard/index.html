@@ -51,6 +51,7 @@
     <button onclick="setTab('protection')" id="tab-protection" class="pb-2">Proteção</button>
     <button onclick="setTab('statuspage')" id="tab-statuspage" class="pb-2">Status Page</button>
     <button onclick="setTab('webhook')"    id="tab-webhook"    class="pb-2">Webhook</button>
+    <button onclick="setTab('agent')"      id="tab-agent"      class="pb-2">Agente (beta)</button>
   </div>
 
   <!-- ── MONITOR ── -->
@@ -80,6 +81,17 @@
         <p id="mon-creds-count" class="text-lg font-semibold text-gray-400">—</p>
         <p class="text-xs text-gray-400 mt-0.5">configuradas</p>
       </div>
+    </div>
+
+    <div id="pair-debug-live-card" class="hidden bg-white border rounded-xl p-4 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pair-debugging ao vivo</p>
+        <span class="flex items-center gap-1.5 text-xs font-medium text-indigo-600">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span> ativo
+        </span>
+      </div>
+      <img id="pair-debug-live-img" class="w-full rounded-lg border" />
+      <p id="pair-debug-live-url" class="text-xs text-gray-400 mt-2 font-mono truncate"></p>
     </div>
 
     <div class="bg-white border rounded-xl p-4 mb-4">
@@ -195,6 +207,33 @@
       </div>
       <div class="flex justify-end">
         <button onclick="saveWebhook()" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AGENTE (beta) ── -->
+  <div id="panel-agent" class="hidden">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Agente embutido — configuração antecipada</h2>
+    <p class="text-xs text-gray-500 mb-4">
+      Guarda uma chave de API pra um futuro agente rodando dentro do próprio dashboard (sem precisar do Claude Code/Gemini CLI abertos).
+      <strong>Ainda não existe agente nenhum usando essa chave</strong> — isso só evita ter que configurar de novo quando ele existir.
+    </p>
+    <div class="bg-white border rounded-xl p-5 space-y-4 max-w-lg">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Provedor</label>
+        <select id="agent-provider" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+          <option value="gemini">Google Gemini</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">API key</label>
+        <input id="agent-apikey" type="password" placeholder="cole a chave aqui" class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        <p id="agent-current" class="text-xs text-gray-400 mt-1"></p>
+      </div>
+      <div class="flex justify-end">
+        <button onclick="saveAgentConfig()" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
       </div>
     </div>
   </div>
@@ -520,7 +559,7 @@ function setLoading(btnId, loading) {
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-const ALL_TABS = ['monitor','tests','creds','protection','statuspage','webhook'];
+const ALL_TABS = ['monitor','tests','creds','protection','statuspage','webhook','agent'];
 function setTab(tab) {
   ALL_TABS.forEach(t => {
     document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
@@ -531,6 +570,7 @@ function setTab(tab) {
   if (tab === 'protection')  loadProtection();
   if (tab === 'statuspage')  loadStatusPage();
   if (tab === 'webhook')     loadWebhook();
+  if (tab === 'agent')       loadAgentConfig();
 }
 
 // ── Status bar ────────────────────────────────────────────────────────────────
@@ -621,9 +661,47 @@ function fmtRelative(iso) {
 function startMonitorPolling() {
   stopMonitorPolling();
   _monitorPoll = setInterval(loadMonitor, 8000);
+  startPairDebugPolling();
 }
 function stopMonitorPolling() {
   if (_monitorPoll) { clearInterval(_monitorPoll); _monitorPoll = null; }
+  stopPairDebugPolling();
+}
+
+// ── Pair-debugging live view ──────────────────────────────────────────────────
+// Two speeds on purpose: checking "is a session even active" is cheap and
+// only needs to happen occasionally; once one IS active, the frame itself
+// polls fast enough to feel live without hammering the server when idle.
+let _pairDebugStatusPoll = null;
+let _pairDebugFramePoll = null;
+
+function startPairDebugPolling() {
+  stopPairDebugPolling();
+  checkPairDebugStatus();
+  _pairDebugStatusPoll = setInterval(checkPairDebugStatus, 2000);
+}
+function stopPairDebugPolling() {
+  if (_pairDebugStatusPoll) { clearInterval(_pairDebugStatusPoll); _pairDebugStatusPoll = null; }
+  if (_pairDebugFramePoll) { clearInterval(_pairDebugFramePoll); _pairDebugFramePoll = null; }
+}
+
+async function checkPairDebugStatus() {
+  const r = await apiFetch(`/api/pair-debug/status`).then(r => r.json()).catch(() => ({ active: false }));
+  const card = document.getElementById('pair-debug-live-card');
+  card.classList.toggle('hidden', !r.active);
+
+  if (r.active) {
+    document.getElementById('pair-debug-live-url').textContent = r.url ?? '';
+    if (!_pairDebugFramePoll) _pairDebugFramePoll = setInterval(refreshPairDebugFrame, 500);
+  } else if (_pairDebugFramePoll) {
+    clearInterval(_pairDebugFramePoll);
+    _pairDebugFramePoll = null;
+  }
+}
+
+function refreshPairDebugFrame() {
+  const img = document.getElementById('pair-debug-live-img');
+  img.src = `${API}/api/pair-debug/frame?t=${Date.now()}${_currentProject ? '&project=' + encodeURIComponent(_currentProject) : ''}`;
 }
 
 async function loadMonitor() {
@@ -1177,6 +1255,27 @@ async function saveWebhook() {
   }).then(r => r.json());
   toast(r.message ?? r.error, !!r.error);
   if (!r.error) loadWebhook();
+}
+
+// ── Agent config (scaffolding — nothing reads this yet) ───────────────────────
+async function loadAgentConfig() {
+  const r = await apiFetch(`/api/agent-config`).then(r => r.json()).catch(() => ({ provider: 'gemini', apiKey: null }));
+  document.getElementById('agent-provider').value = r.provider ?? 'gemini';
+  document.getElementById('agent-apikey').value = '';
+  const current = document.getElementById('agent-current');
+  current.textContent = r.apiKey ? `Configurada: ${r.apiKey} — preencha acima só se quiser trocar.` : 'Nenhuma chave configurada ainda.';
+}
+
+async function saveAgentConfig() {
+  const provider = document.getElementById('agent-provider').value;
+  const apiKey = document.getElementById('agent-apikey').value.trim();
+  if (!apiKey) { toast('Cole a API key pra salvar.', true); return; }
+  const r = await apiFetch(`/api/agent-config`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, apiKey }),
+  }).then(r => r.json());
+  toast(r.message ?? r.error, !!r.error);
+  if (!r.error) loadAgentConfig();
 }
 
 // ── Project management ────────────────────────────────────────────────────────

@@ -166,6 +166,67 @@ horários, de forma independente, enquanto o dashboard estiver de pé.
 Se você só tem um projeto, não precisa mexer em nada disso — sem essa variável, tudo
 funciona no modo padrão (um projeto só, sem namespace), exatamente como antes.
 
+## Integração com GitHub Actions (webhook por fluxo)
+
+Dá pra disparar um teste específico a partir de um webhook externo (ex: deploy da Vercel
+concluído) via [`repository_dispatch`](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#repository_dispatch)
+do GitHub Actions.
+
+⚠️ **O workflow e o runner precisam ficar no repositório do projeto sendo testado — nunca
+neste repositório do tuxedo-qa, que é público.** O GitHub recomenda explicitamente não
+registrar [self-hosted runners em repositórios públicos](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#self-hosted-runner-security-with-public-repositories)
+— qualquer PR de fora poderia rodar código na sua máquina. Um runner auto-hospedado é
+necessário aqui porque os testes/credenciais do tuxedo-qa vivem só localmente na máquina
+onde ele está instalado (de propósito — nunca são commitados em lugar nenhum), então um
+runner hospedado pelo próprio GitHub não teria acesso a eles.
+
+1. Registre a máquina onde o tuxedo-qa está instalado como
+   [self-hosted runner](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners)
+   do repositório (privado) do projeto sendo testado.
+
+2. Copie esse workflow pra `.github/workflows/tuxedo-qa-dispatch.yml` nesse mesmo repositório:
+
+   ```yaml
+   name: tuxedo-qa dispatch
+   on:
+     repository_dispatch:
+       types: [tuxedo-qa-run]
+
+   jobs:
+     run-test:
+       runs-on: self-hosted
+       steps:
+         - name: Rodar o fluxo pedido
+           working-directory: /caminho/para/tuxedo-qa   # ajuste pro caminho real da instalação
+           env:
+             TUXEDO_QA_PROJECT: ${{ github.event.client_payload.project }}
+             TUXEDO_CI_TEST: ${{ github.event.client_payload.flow }}
+           run: bun scripts/ci-run-test.mjs
+   ```
+
+3. Dispare de qualquer lugar (webhook de deploy, outro workflow, curl manual) com um
+   [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+   que tenha permissão `repo` nesse repositório:
+
+   ```bash
+   curl -X POST \
+     -H "Accept: application/vnd.github+json" \
+     -H "Authorization: Bearer <SEU_TOKEN>" \
+     https://api.github.com/repos/<owner>/<repo>/dispatches \
+     -d '{"event_type":"tuxedo-qa-run","client_payload":{"flow":"login-checkout","project":"fretebras"}}'
+   ```
+
+   `flow` é o nome do arquivo de teste sem `.spec.ts` (omita pra rodar todos os testes
+   habilitados do projeto); `project` é o slug usado em `TUXEDO_QA_PROJECT` (omita pro
+   projeto padrão/sem namespace).
+
+`scripts/ci-run-test.mjs` chama o mesmo `run_tests` que o dashboard e o chat usam —
+resultado, histórico e webhook (Discord/Slack/genérico) configurado funcionam exatamente
+igual a uma execução manual. **Não** confere o flag `validated` do sandbox (isso continua
+só protegendo o scheduler automático e as notificações de teste ainda não validado,
+exatamente como já funciona hoje) — um disparo via webhook é uma ação deliberada de quem
+configurou o workflow, no mesmo nível de confiança de clicar "Rodar" no dashboard.
+
 ## Desenvolvimento
 
 ```bash

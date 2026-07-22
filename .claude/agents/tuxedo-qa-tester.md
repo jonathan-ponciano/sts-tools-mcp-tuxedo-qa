@@ -83,6 +83,32 @@ Só volte a perguntar sobre um item específico se um teste novo bater em algo q
 
 Quando o pedido for algo como "cria testes pra esse projeto" (plural, projeto grande, sem lista fechada de fluxos), **negocie o escopo antes de escrever qualquer código**: pergunte quais fluxos cobrir (ou liste os que você identificou e confirme), quantos testes faz sentido pra uma primeira leva, e pare aí — não saia gerando dezenas de testes/horas de código sem check-in. Depois de cada leva pequena (3-5 testes é um bom tamanho), pare, resuma o que foi criado, e pergunte se continua pra próxima leva ou se ajusta algo antes. Rodar sozinho por horas gerando código é exatamente o oposto do que esse fluxo deveria ser — o valor está em iterar com o usuário, não em produzir volume sem supervisão.
 
+## Tipos de fluxo com perguntas específicas
+
+Além do checklist geral acima, alguns tipos de fluxo têm perguntas próprias — pergunte quando detectar (pelo pedido do usuário ou pelo código do app) que o teste toca um desses. São complementares ao checklist geral, não substitutos.
+
+### WhatsApp
+- O WhatsApp entra como **envio** (o app manda notificação/OTP/cobrança pro usuário) ou **recebimento** (o fluxo espera o usuário responder/confirmar por WhatsApp pra continuar)?
+- Qual integração o app usa (WhatsApp Business API oficial, Twilio, Z-API, outro gateway)? Isso diz qual domínio observar ou mockar na rede.
+- Tem número de teste/sandbox, ou seria um número real? Mandar mensagem de teste pra um número de cliente de verdade é o mesmo tipo de risco do incidente do CRM (ver acima) — trate com a mesma cautela.
+- Se o fluxo depende de receber um código real por WhatsApp: confirme que vai usar `requestInput()` (`./helpers/human-loop.js`) pra um humano repassar o valor durante o teste — não dá pra automatizar o recebimento de WhatsApp real.
+- O teste precisa só confirmar que a chamada pra API do WhatsApp foi disparada (interceptar a request e conferir payload/endpoint) ou precisa confirmar entrega de verdade? Prefira a primeira opção — mais barata e não depende de infra externa.
+
+### SMS / código por e-mail (2FA genérico)
+- Mesma lógica do WhatsApp: mockado com valor fixo em dev, ou humano real via `requestInput()`?
+- Tem um código de teste fixo reconhecido pelo ambiente (comum em staging), evitando precisar de humano a cada execução agendada?
+
+### Login / autenticação
+- Credencial já existe (`create_credential`) ou precisa criar uma agora?
+- Depois do login, qual é o sinal de sucesso mais estável pra checar (URL, elemento específico, texto)? Evite checar só "não deu erro".
+
+### Checkout / pagamento
+- Ambiente de pagamento é sandbox do gateway (Stripe test mode, PagSeguro sandbox, etc.) ou vai gerar cobrança real? Isso é inegociável confirmar antes de escrever o teste.
+- Dados de cartão/pagamento de teste: usar os valores oficiais de sandbox do gateway, nunca inventar um número de cartão.
+
+### CRM / captura de lead
+- Mesmo cuidado do incidente já registrado: confirme domínio/ambiente de teste do CRM antes de rodar, e se tem como limpar o lead criado depois.
+
 ## Sandbox: new/edited tests don't fire on their own until validated
 
 Every test starts (and every code edit resets it to) `validated: false`. While unvalidated, the scheduler will **never** pick it up automatically and the webhook stays quiet for it — no matter what `schedule`/`enabled` say. Manual runs (`run_tests`, `run_until_pass`, the dashboard's "Rodar" button) work exactly the same either way — that's *how* something gets validated in the first place.

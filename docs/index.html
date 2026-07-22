@@ -21,6 +21,7 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
+  html{scroll-behavior:smooth}
   body{
     background:var(--bg); color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -42,8 +43,9 @@
   .brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:16px; color:var(--text)}
   .brand .dot{width:9px;height:9px;border-radius:3px;background:var(--accent);display:inline-block}
   .navlinks{display:flex; gap:22px; font-size:14px; color:var(--text-dim)}
-  .navlinks a{color:var(--text-dim)}
+  .navlinks a{color:var(--text-dim); transition:color .15s}
   .navlinks a:hover{color:var(--text)}
+  .navlinks a.active{color:var(--accent); font-weight:600}
 
   /* Hero */
   header.hero{padding:76px 0 56px; text-align:center}
@@ -58,8 +60,14 @@
   .btn-secondary:hover{border-color:var(--accent); text-decoration:none}
 
   section{padding:56px 0; border-top:1px solid var(--border)}
+  section.tint{background:var(--bg-alt)}
   h2{font-size:26px; margin:0 0 8px; letter-spacing:-0.01em}
+  .eyebrow{display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin-bottom:8px}
   .section-sub{color:var(--text-dim); font-size:15px; margin:0 0 32px; max-width:600px}
+
+  /* Category headings inside the reference sections (tools/skills) */
+  .cat-heading{font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--text-dim); margin:28px 0 10px}
+  .cat-heading:first-of-type{margin-top:0}
 
   /* Feature grid */
   .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px}
@@ -67,16 +75,19 @@
   .card .icon{font-size:20px; margin-bottom:10px; display:block}
   .card h3{font-size:15px; margin:0 0 6px}
   .card p{font-size:13.5px; color:var(--text-dim); margin:0}
+  section.tint .card{background:var(--bg)}
 
   /* Use cases */
   .usecases{display:grid; gap:14px}
   .usecase{display:flex; gap:16px; background:var(--bg-alt); border:1px solid var(--border); border-radius:14px; padding:18px 20px}
+  section.tint .usecase{background:var(--bg)}
   .usecase .num{flex-shrink:0; width:30px; height:30px; border-radius:8px; background:var(--accent-soft); color:var(--accent); font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center}
   .usecase h3{margin:0 0 4px; font-size:15px}
   .usecase p{margin:0; font-size:13.5px; color:var(--text-dim)}
 
   /* Tools table */
-  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:14px; background:var(--bg-alt)}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:14px; background:var(--bg-alt); margin-bottom:20px}
+  section.tint .table-wrap{background:var(--bg)}
   table{width:100%; border-collapse:collapse; font-size:13.5px}
   th,td{text-align:left; padding:12px 16px; border-bottom:1px solid var(--border); vertical-align:top}
   th{color:var(--text-dim); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em}
@@ -95,6 +106,7 @@
   /* Collapsible alternatives (manual install, per-client config) — kept out
      of the numbered steps flow since they're alternatives, not sequence */
   details{margin-top:10px; border:1px solid var(--border); border-radius:10px; background:var(--bg); padding:2px 14px}
+  section.tint details{background:var(--bg-alt)}
   details[open]{padding-bottom:12px}
   details details{margin-left:0; margin-top:8px}
   summary{cursor:pointer; font-size:13.5px; font-weight:600; padding:10px 0; color:var(--text)}
@@ -118,12 +130,12 @@
   <div class="wrap">
     <div class="brand"><span class="dot"></span> tuxedo-qa</div>
     <div class="navlinks">
-      <a href="#features">Recursos</a>
-      <a href="#use-cases">Casos de uso</a>
-      <a href="#tools">Ferramentas MCP</a>
-      <a href="#skills">Skills</a>
-      <a href="#quickstart">Como começar</a>
-      <a href="#multi-project">Múltiplos projetos</a>
+      <a href="#features" data-nav>Recursos</a>
+      <a href="#quickstart" data-nav>Como começar</a>
+      <a href="#use-cases" data-nav>Casos de uso</a>
+      <a href="#multi-project" data-nav>Múltiplos projetos</a>
+      <a href="#tools" data-nav>Ferramentas MCP</a>
+      <a href="#skills" data-nav>Skills</a>
       <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">GitHub</a>
     </div>
   </div>
@@ -140,8 +152,8 @@
       credenciais e página pública de status, sem precisar de pipeline de CI.
     </p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Ver no GitHub</a>
-      <a class="btn btn-secondary" href="#quickstart">Como começar →</a>
+      <a class="btn btn-primary" href="#quickstart">Como começar →</a>
+      <a class="btn btn-secondary" href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Ver no GitHub</a>
     </div>
   </div>
 </header>
@@ -205,161 +217,9 @@
   </div>
 </section>
 
-<section id="use-cases">
+<section id="quickstart" class="tint">
   <div class="wrap">
-    <h2>Casos de uso</h2>
-    <p class="section-sub">Feito pra times que querem cobertura de QA de verdade sem montar um pipeline de CI/CD de testes.</p>
-    <div class="usecases">
-      <div class="usecase">
-        <div class="num">1</div>
-        <div><h3>Smoke tests pós-deploy, direto do chat</h3>
-        <p>Peça ao Claude ou Gemini pra rodar a suíte logo após um deploy — use <code>pause_tests</code> antes pra evitar alertas falsos, depois <code>run_tests</code> assim que estiver no ar.</p></div>
-      </div>
-      <div class="usecase">
-        <div class="num">2</div>
-        <div><h3>Monitoramento sintético contínuo</h3>
-        <p>Agende fluxos críticos (login, checkout, captura de lead) pra rodar a cada hora e detectar falhas via webhook antes que os clientes percebam.</p></div>
-      </div>
-      <div class="usecase">
-        <div class="num">3</div>
-        <div><h3>Testes atrás de autenticação</h3>
-        <p>Ambientes de staging protegidos por Vercel/Cloudflare Access ou Basic Auth ficam acessíveis via os presets de headers de proteção já embutidos.</p></div>
-      </div>
-      <div class="usecase">
-        <div class="num">4</div>
-        <div><h3>Fluxos que precisam de um humano numa etapa</h3>
-        <p>Etapas de 2FA por SMS/e-mail pausam o teste e aguardam um valor fornecido pelo seu agente de IA, retomando automaticamente.</p></div>
-      </div>
-      <div class="usecase">
-        <div class="num">5</div>
-        <div><h3>Página de status pra stakeholders não-técnicos</h3>
-        <p>Exponha um conjunto selecionado de testes como uma página pública de uptime — sem login no dashboard, sem precisar de cliente MCP pra ver.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="tools">
-  <div class="wrap">
-    <h2>Referência das ferramentas MCP</h2>
-    <p class="section-sub">Tudo que o Claude, Gemini ou qualquer outro cliente MCP pode chamar assim que o servidor estiver conectado.</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Ferramenta</th><th>O que faz</th></tr></thead>
-        <tbody>
-          <tr><td><code>create_test</code></td><td>Cria um novo arquivo de teste Playwright a partir do código gerado. Fica em modo sandbox (não roda sozinho, sem alertar webhook) até ser validado manualmente.</td></tr>
-          <tr><td><code>list_tests</code></td><td>Lista todos os testes com o último status conhecido; filtra por status ou limite.</td></tr>
-          <tr><td><code>read_test</code></td><td>Lê o conteúdo de um arquivo de teste.</td></tr>
-          <tr><td><code>update_test</code></td><td>Atualiza script (com dry-run — edição ruim é rejeitada e o código anterior é restaurado), nome de exibição, descrição, schedule, credencial, estado (ativo/inativo) ou validação de um teste.</td></tr>
-          <tr><td><code>delete_test</code></td><td>Apaga um teste e seu histórico permanentemente. Prefira desativar via <code>update_test</code>.</td></tr>
-          <tr><td><code>run_tests</code></td><td>Roda todos os testes ou um arquivo específico; respeita o estado de pausa; notifica o webhook configurado.</td></tr>
-          <tr><td><code>run_until_pass</code></td><td>Roda um teste repetidamente, aplicando correções entre tentativas, até passar ou atingir o limite de tentativas.</td></tr>
-          <tr><td><code>get_status</code></td><td>Status geral da suíte, ou detalhe de falha e sugestões de correção por teste.</td></tr>
-          <tr><td><code>pause_tests</code></td><td>Pausa toda a suíte por até 60 minutos — retoma automaticamente.</td></tr>
-          <tr><td><code>set_webhook</code></td><td>Configura a URL do webhook (Discord, Slack, ou JSON genérico) usada nas notificações de execução.</td></tr>
-          <tr><td><code>request_credential</code></td><td>Pede pro humano preencher uma credencial direto no dashboard (só os nomes dos campos, nunca o valor) — o valor real nunca passa pela conversa com a IA.</td></tr>
-          <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado com um valor que a IA já tem em mãos (ex: o usuário colou no chat).</td></tr>
-          <tr><td><code>list_credentials</code></td><td>Lista os conjuntos de credenciais salvos com valores mascarados.</td></tr>
-          <tr><td><code>delete_credential</code></td><td>Apaga um conjunto de credenciais nomeado.</td></tr>
-          <tr><td><code>start_pair_debug</code></td><td>Abre um navegador visível pra você seguir um fluxo manualmente, gravando console, rede, erros e navegações com timestamp. A sessão também aparece ao vivo no dashboard (aba Monitor).</td></tr>
-          <tr><td><code>get_pair_debug_context</code></td><td>Retorna a linha do tempo gravada até agora na sessão de pair-debugging ativa.</td></tr>
-          <tr><td><code>stop_pair_debug</code></td><td>Encerra a sessão de pair-debugging e devolve a linha do tempo completa mais um rascunho de teste Playwright.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section id="skills">
-  <div class="wrap">
-    <h2>Skills</h2>
-    <p class="section-sub">O que são Skills, como baixar/instalar a <code>/tuxedo-qa</code>, e por que ela existe.</p>
-
-    <h3 style="font-size:17px;margin:0 0 10px">O que são Skills?</h3>
-    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 28px">
-      Skills são pacotes de contexto especializado que descrevem regras de negócio do
-      tuxedo-qa, padrões técnicos oficiais, convenções de teste por tipo de fluxo
-      (login, checkout, WhatsApp, CRM) e boas práticas pra credenciais e 2FA. São consumidas
-      diretamente por IDEs e ferramentas de AI coding como Claude Code — a skill
-      <code>/tuxedo-qa</code> já confere se o MCP está instalado pro projeto atual, oferece
-      pra instalar se não estiver, e escreve/roda/corrige teste seguindo essas convenções sem
-      precisar reexplicar nada a cada conversa.
-    </p>
-
-    <h3 style="font-size:17px;margin:0 0 10px">Download e instalação da skill</h3>
-    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 14px">
-      O instalador completo (<a href="#quickstart">seção abaixo</a>) já cuida disso — copia a
-      skill pra <code>~/.claude/skills/tuxedo-qa/</code> automaticamente. Se quiser só a skill,
-      sem instalar o servidor MCP ainda:
-    </p>
-    <pre style="margin-bottom:28px"><code>mkdir -p ~/.claude/skills/tuxedo-qa
-curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/.claude/skills/tuxedo-qa/SKILL.md \
-  -o ~/.claude/skills/tuxedo-qa/SKILL.md</code></pre>
-    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 28px">
-      Reinicie/reconecte o Claude Code e rode <code>/tuxedo-qa</code> — ela mesma detecta que o
-      MCP ainda não está instalado e oferece pra rodar o instalador completo na hora.
-    </p>
-
-    <div class="grid" style="margin-bottom:36px">
-      <div class="card">
-        <span class="icon">🎯</span>
-        <h3>Contexto Preciso</h3>
-        <p>Informação atualizada e específica sobre as ferramentas MCP, convenções de teste e o modelo de sandbox/validação do projeto.</p>
-      </div>
-      <div class="card">
-        <span class="icon">📐</span>
-        <h3>Padronização</h3>
-        <p>Testes gerados seguem sempre as mesmas convenções oficiais — helper de credenciais, geração de CPF/CNPJ, `requestInput()` pra 2FA — em vez de reinventar a cada conversa.</p>
-      </div>
-      <div class="card">
-        <span class="icon">⚡</span>
-        <h3>Aceleração</h3>
-        <p>Menos ida-e-volta reexplicando o toolkit, mais regra direta — a skill já sabe as 17 ferramentas e quando usar cada uma.</p>
-      </div>
-      <div class="card">
-        <span class="icon">🤖</span>
-        <h3>IA-friendly</h3>
-        <p>Estrutura pensada pra consumo automático por agentes — auto-aciona pelo contexto do pedido, ou via <code>/tuxedo-qa</code> explícito.</p>
-      </div>
-      <div class="card">
-        <span class="icon">🛡️</span>
-        <h3>Menos Erros</h3>
-        <p>Checklist de pré-voo (identidade de teste, serviços externos reais, credenciais) reduz interpretação errada antes de qualquer teste ser escrito.</p>
-      </div>
-    </div>
-
-    <h3 style="font-size:17px;margin:0 0 14px">Filosofia</h3>
-    <div class="grid">
-      <div class="card">
-        <h3>1. Explícitas</h3>
-        <p>Sem regra implícita ou achismo — o checklist de pré-voo e as convenções de teste estão escritos por extenso na skill, não inferidos.</p>
-      </div>
-      <div class="card">
-        <h3>2. Auditáveis</h3>
-        <p>Texto claro, versionado no próprio repositório (<code>.claude/skills/tuxedo-qa/SKILL.md</code>) e revisável como qualquer outro arquivo do projeto.</p>
-      </div>
-      <div class="card">
-        <h3>3. Modulares</h3>
-        <p>Cada seção da skill resolve um problema específico — setup, convenções de código, checklist por tipo de fluxo, sandbox — sem depender uma da outra.</p>
-      </div>
-      <div class="card">
-        <h3>4. IA-first</h3>
-        <p>Escrita pensando em consumo automático por um agente, com gatilhos de invocação (<code>description</code>/<code>when_to_use</code>) explícitos.</p>
-      </div>
-      <div class="card">
-        <h3>5. Human-readable</h3>
-        <p>É markdown puro — também dá pra ler direto, sem precisar de um agente pra traduzir.</p>
-      </div>
-      <div class="card">
-        <h3>6. Fonte única de verdade</h3>
-        <p>Uma skill só, versionada junto do código — evita divergência entre o que o agente sabe e o que o projeto realmente faz.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="quickstart">
-  <div class="wrap">
+    <span class="eyebrow">Guia</span>
     <h2>Como começar</h2>
     <p class="section-sub">Roda inteiramente na sua máquina em <a href="https://bun.sh">Bun</a> — sem etapa de build, o servidor executa o TypeScript direto da fonte. Um servidor MCP local mais um dashboard opcional.</p>
     <div class="steps">
@@ -411,7 +271,7 @@ bun install</code></pre>
             </details>
           </details>
 
-          <p style="margin-top:14px">Lista completa das <a href="#tools">17 ferramentas disponíveis e o que cada uma faz</a> logo abaixo. Como baixar só a skill <code>/tuxedo-qa</code> sem instalar o servidor: <a href="#skills">seção Skills</a>.</p>
+          <p style="margin-top:14px">Lista completa das <a href="#tools">17 ferramentas disponíveis e o que cada uma faz</a>, e como baixar só a skill <code>/tuxedo-qa</code> sem instalar o servidor, mais abaixo nesta página.</p>
         </div>
       </div>
       <div class="step">
@@ -424,7 +284,7 @@ bun install</code></pre>
       <div class="step">
         <div class="step-body">
           <h3>Monitorando mais de um app/cliente?</h3>
-          <p>Uma instalação só serve vários projetos isolados, com um dashboard só pra ver todos — veja a <a href="#multi-project">seção detalhada abaixo</a>.</p>
+          <p>Uma instalação só serve vários projetos isolados, com um dashboard só pra ver todos — veja <a href="#multi-project">Múltiplos projetos</a> abaixo.</p>
         </div>
       </div>
       <div class="step">
@@ -444,8 +304,44 @@ bun install</code></pre>
   </div>
 </section>
 
-<section id="multi-project">
+<section id="use-cases">
   <div class="wrap">
+    <span class="eyebrow">Guia</span>
+    <h2>Casos de uso</h2>
+    <p class="section-sub">Feito pra times que querem cobertura de QA de verdade sem montar um pipeline de CI/CD de testes.</p>
+    <div class="usecases">
+      <div class="usecase">
+        <div class="num">1</div>
+        <div><h3>Smoke tests pós-deploy, direto do chat</h3>
+        <p>Peça ao Claude ou Gemini pra rodar a suíte logo após um deploy — use <code>pause_tests</code> antes pra evitar alertas falsos, depois <code>run_tests</code> assim que estiver no ar.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">2</div>
+        <div><h3>Monitoramento sintético contínuo</h3>
+        <p>Agende fluxos críticos (login, checkout, captura de lead) pra rodar a cada hora e detectar falhas via webhook antes que os clientes percebam.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">3</div>
+        <div><h3>Testes atrás de autenticação</h3>
+        <p>Ambientes de staging protegidos por Vercel/Cloudflare Access ou Basic Auth ficam acessíveis via os presets de headers de proteção já embutidos.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">4</div>
+        <div><h3>Fluxos que precisam de um humano numa etapa</h3>
+        <p>Etapas de 2FA por SMS/e-mail pausam o teste e aguardam um valor fornecido pelo seu agente de IA, retomando automaticamente.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">5</div>
+        <div><h3>Página de status pra stakeholders não-técnicos</h3>
+        <p>Exponha um conjunto selecionado de testes como uma página pública de uptime — sem login no dashboard, sem precisar de cliente MCP pra ver.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="multi-project" class="tint">
+  <div class="wrap">
+    <span class="eyebrow">Guia</span>
     <h2>Múltiplos projetos, um dashboard só</h2>
     <p class="section-sub">Uma instalação do tuxedo-qa serve quantos apps/clientes você quiser — cada um completamente isolado, todos visíveis num dashboard único.</p>
 
@@ -503,11 +399,175 @@ TUXEDO_QA_PROJECT=xtagger bash install.sh</code></pre>
   </div>
 </section>
 
+<section id="tools">
+  <div class="wrap">
+    <span class="eyebrow">Referência</span>
+    <h2>Ferramentas MCP</h2>
+    <p class="section-sub">Tudo que o Claude, Gemini ou qualquer outro cliente MCP pode chamar assim que o servidor estiver conectado — agrupado por área, não é preciso ler tudo de uma vez.</p>
+
+    <p class="cat-heading">Ciclo de vida do teste</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ferramenta</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>create_test</code></td><td>Cria um novo arquivo de teste Playwright a partir do código gerado. Fica em modo sandbox (não roda sozinho, sem alertar webhook) até ser validado manualmente.</td></tr>
+          <tr><td><code>list_tests</code></td><td>Lista todos os testes com o último status conhecido; filtra por status ou limite.</td></tr>
+          <tr><td><code>read_test</code></td><td>Lê o conteúdo de um arquivo de teste.</td></tr>
+          <tr><td><code>update_test</code></td><td>Atualiza script (com dry-run — edição ruim é rejeitada e o código anterior é restaurado), nome de exibição, descrição, schedule, credencial, estado (ativo/inativo) ou validação de um teste.</td></tr>
+          <tr><td><code>delete_test</code></td><td>Apaga um teste e seu histórico permanentemente. Prefira desativar via <code>update_test</code>.</td></tr>
+          <tr><td><code>run_tests</code></td><td>Roda todos os testes ou um arquivo específico; respeita o estado de pausa; notifica o webhook configurado.</td></tr>
+          <tr><td><code>run_until_pass</code></td><td>Roda um teste repetidamente, aplicando correções entre tentativas, até passar ou atingir o limite de tentativas.</td></tr>
+          <tr><td><code>get_status</code></td><td>Status geral da suíte, ou detalhe de falha e sugestões de correção por teste.</td></tr>
+          <tr><td><code>pause_tests</code></td><td>Pausa toda a suíte por até 60 minutos — retoma automaticamente.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="cat-heading">Alertas</p>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><td><code>set_webhook</code></td><td>Configura a URL do webhook (Discord, Slack, ou JSON genérico) usada nas notificações de execução.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="cat-heading">Credenciais</p>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><td><code>request_credential</code></td><td>Pede pro humano preencher uma credencial direto no dashboard (só os nomes dos campos, nunca o valor) — o valor real nunca passa pela conversa com a IA.</td></tr>
+          <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado com um valor que a IA já tem em mãos (ex: o usuário colou no chat).</td></tr>
+          <tr><td><code>list_credentials</code></td><td>Lista os conjuntos de credenciais salvos com valores mascarados.</td></tr>
+          <tr><td><code>delete_credential</code></td><td>Apaga um conjunto de credenciais nomeado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="cat-heading">Pair-debugging ao vivo</p>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><td><code>start_pair_debug</code></td><td>Abre um navegador visível pra você seguir um fluxo manualmente, gravando console, rede, erros e navegações com timestamp. A sessão também aparece ao vivo no dashboard (aba Monitor).</td></tr>
+          <tr><td><code>get_pair_debug_context</code></td><td>Retorna a linha do tempo gravada até agora na sessão de pair-debugging ativa.</td></tr>
+          <tr><td><code>stop_pair_debug</code></td><td>Encerra a sessão de pair-debugging e devolve a linha do tempo completa mais um rascunho de teste Playwright.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="skills" class="tint">
+  <div class="wrap">
+    <span class="eyebrow">Referência</span>
+    <h2>Skills</h2>
+    <p class="section-sub">O que são Skills, como baixar/instalar a <code>/tuxedo-qa</code>, e por que ela existe.</p>
+
+    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 24px">
+      Skills são pacotes de contexto especializado que descrevem regras de negócio do
+      tuxedo-qa, padrões técnicos oficiais, convenções de teste por tipo de fluxo
+      (login, checkout, WhatsApp, CRM) e boas práticas pra credenciais e 2FA. São consumidas
+      diretamente por IDEs e ferramentas de AI coding como Claude Code — a skill
+      <code>/tuxedo-qa</code> já confere se o MCP está instalado pro projeto atual, oferece
+      pra instalar se não estiver, e escreve/roda/corrige teste seguindo essas convenções sem
+      precisar reexplicar nada a cada conversa.
+    </p>
+
+    <p class="cat-heading">Download e instalação da skill</p>
+    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 14px">
+      O instalador completo (<a href="#quickstart">seção Como começar</a>) já cuida disso — copia a
+      skill pra <code>~/.claude/skills/tuxedo-qa/</code> automaticamente. Se quiser só a skill,
+      sem instalar o servidor MCP ainda:
+    </p>
+    <pre style="margin-bottom:14px"><code>mkdir -p ~/.claude/skills/tuxedo-qa
+curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/.claude/skills/tuxedo-qa/SKILL.md \
+  -o ~/.claude/skills/tuxedo-qa/SKILL.md</code></pre>
+    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 28px">
+      Reinicie/reconecte o Claude Code e rode <code>/tuxedo-qa</code> — ela mesma detecta que o
+      MCP ainda não está instalado e oferece pra rodar o instalador completo na hora.
+    </p>
+
+    <p class="cat-heading">Por que usar</p>
+    <div class="grid" style="margin-bottom:36px">
+      <div class="card">
+        <span class="icon">🎯</span>
+        <h3>Contexto Preciso</h3>
+        <p>Informação atualizada e específica sobre as ferramentas MCP, convenções de teste e o modelo de sandbox/validação do projeto.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📐</span>
+        <h3>Padronização</h3>
+        <p>Testes gerados seguem sempre as mesmas convenções oficiais — helper de credenciais, geração de CPF/CNPJ, `requestInput()` pra 2FA — em vez de reinventar a cada conversa.</p>
+      </div>
+      <div class="card">
+        <span class="icon">⚡</span>
+        <h3>Aceleração</h3>
+        <p>Menos ida-e-volta reexplicando o toolkit, mais regra direta — a skill já sabe as 17 ferramentas e quando usar cada uma.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🤖</span>
+        <h3>IA-friendly</h3>
+        <p>Estrutura pensada pra consumo automático por agentes — auto-aciona pelo contexto do pedido, ou via <code>/tuxedo-qa</code> explícito.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🛡️</span>
+        <h3>Menos Erros</h3>
+        <p>Checklist de pré-voo (identidade de teste, serviços externos reais, credenciais) reduz interpretação errada antes de qualquer teste ser escrito.</p>
+      </div>
+    </div>
+
+    <p class="cat-heading">Filosofia</p>
+    <div class="grid">
+      <div class="card">
+        <h3>1. Explícitas</h3>
+        <p>Sem regra implícita ou achismo — o checklist de pré-voo e as convenções de teste estão escritos por extenso na skill, não inferidos.</p>
+      </div>
+      <div class="card">
+        <h3>2. Auditáveis</h3>
+        <p>Texto claro, versionado no próprio repositório (<code>.claude/skills/tuxedo-qa/SKILL.md</code>) e revisável como qualquer outro arquivo do projeto.</p>
+      </div>
+      <div class="card">
+        <h3>3. Modulares</h3>
+        <p>Cada seção da skill resolve um problema específico — setup, convenções de código, checklist por tipo de fluxo, sandbox — sem depender uma da outra.</p>
+      </div>
+      <div class="card">
+        <h3>4. IA-first</h3>
+        <p>Escrita pensando em consumo automático por um agente, com gatilhos de invocação (<code>description</code>/<code>when_to_use</code>) explícitos.</p>
+      </div>
+      <div class="card">
+        <h3>5. Human-readable</h3>
+        <p>É markdown puro — também dá pra ler direto, sem precisar de um agente pra traduzir.</p>
+      </div>
+      <div class="card">
+        <h3>6. Fonte única de verdade</h3>
+        <p>Uma skill só, versionada junto do código — evita divergência entre o que o agente sabe e o que o projeto realmente faz.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <p>tuxedo-qa — servidor MCP para automação de QA com Playwright. <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">Código no GitHub</a></p>
   </div>
 </footer>
+
+<script>
+  // Scroll-spy: highlights the nav link for whichever section is currently
+  // in view, so there's always a visible answer to "where am I on this page."
+  const navLinks = document.querySelectorAll('.navlinks a[data-nav]');
+  const sections = [...navLinks].map(a => document.querySelector(a.getAttribute('href')));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const idx = sections.indexOf(entry.target);
+      if (idx === -1) return;
+      navLinks[idx].classList.toggle('active', entry.isIntersecting);
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+
+  sections.forEach(s => s && observer.observe(s));
+</script>
 
 </body>
 </html>

@@ -97,14 +97,16 @@ if [ "$registered_any" = false ]; then
   echo "    $(add_command_for gemini)"
 fi
 
-# Claude Code subagent: already knows the full toolkit and this project's
-# testing conventions, so you don't have to re-explain them every session.
-# Global (~/.claude/agents), so it's available in any project — same as the
-# MCP server's --scope user. Gemini CLI has no equivalent mechanism yet.
+# Claude Code skill: invoke with /tuxedo-qa in any project. It checks for an
+# existing MCP connection itself (and offers to install one if missing), then
+# knows the full toolkit and this project's testing conventions — no need to
+# explain them every session. Global (~/.claude/skills), so it's available
+# everywhere, same as the MCP server's --scope user. Gemini CLI has no
+# equivalent mechanism yet.
 if command -v claude >/dev/null 2>&1; then
-  mkdir -p "$HOME/.claude/agents"
-  cp "$INSTALL_DIR/.claude/agents/tuxedo-qa-tester.md" "$HOME/.claude/agents/tuxedo-qa-tester.md"
-  ok "Subagent \"tuxedo-qa-tester\" instalado em ~/.claude/agents/ (Claude Code)"
+  mkdir -p "$HOME/.claude/skills/tuxedo-qa"
+  cp "$INSTALL_DIR/.claude/skills/tuxedo-qa/SKILL.md" "$HOME/.claude/skills/tuxedo-qa/SKILL.md"
+  ok "Skill \"/tuxedo-qa\" instalada em ~/.claude/skills/ (Claude Code)"
 fi
 
 echo ""
@@ -116,7 +118,7 @@ echo "  1. Reinicie/reconecte sua CLI de IA pra carregar o servidor MCP novo."
 echo "  2. (Opcional) inicie o dashboard — um só, mesmo com vários projetos registrados,"
 echo "     ele já mostra todos com um seletor pra trocar de contexto:"
 echo "       cd \"$INSTALL_DIR\" && npm run dashboard"
-echo "  3. Peça pro Claude usar o agente \"tuxedo-qa-tester\" (ou deixe ele acionar sozinho) pra criar o primeiro teste."
+echo "  3. Rode /tuxedo-qa no chat (ou só descreva o fluxo) pra criar o primeiro teste."
 if [ -n "$PROJECT" ]; then
   echo "  4. Pra registrar outro projeto depois: TUXEDO_QA_PROJECT=<outro-slug> bash install.sh"
 fi

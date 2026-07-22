@@ -18,14 +18,15 @@ assistente de IA, sem precisar de pipeline de CI.
 Veja a [referência completa das ferramentas e casos de uso](https://jonathan-ponciano.github.io/sts-tools-mcp-tuxedo-qa/#tools)
 na landing page.
 
-### Subagent do Claude Code
+### Skill do Claude Code — `/tuxedo-qa`
 
-O instalador também registra o subagent **`tuxedo-qa-tester`** (globalmente, em
-`~/.claude/agents/`) — ele já sabe as 16 ferramentas, as convenções de teste do projeto
-(usar o helper de credenciais em vez de senha fixa, `brasil.ts` pra CPF/CNPJ, `human-loop.ts`
-pra 2FA) e quando usar `run_until_pass` vs. corrigir manualmente. O Claude Code aciona ele
-sozinho quando a tarefa é sobre testes/QA; não precisa chamar por nome. (Só Claude Code por
-enquanto — o Gemini CLI não tem esse mecanismo de subagents ainda.)
+O instalador também registra a skill **`tuxedo-qa`** (globalmente, em `~/.claude/skills/`) —
+rode `/tuxedo-qa` em qualquer projeto (ou só descreva o que quer testar; ela aciona sozinha
+pelo contexto). Ela mesma confere se já existe uma conexão MCP registrada pra esse projeto e
+oferece pra instalar se não tiver, já sabe as 16 ferramentas, as convenções de teste do
+projeto (usar o helper de credenciais em vez de senha fixa, `brasil.ts` pra CPF/CNPJ,
+`human-loop.ts` pra 2FA/WhatsApp/SMS) e quando usar `run_until_pass` vs. corrigir manualmente.
+(Só Claude Code por enquanto — o Gemini CLI não tem esse mecanismo de skills ainda.)
 
 ## Como começar
 

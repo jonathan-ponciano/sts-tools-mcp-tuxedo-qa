@@ -30,7 +30,10 @@ projeto (usar o helper de credenciais em vez de senha fixa, `brasil.ts` pra CPF/
 
 ## Como começar
 
-Instalador de um comando só — clona/atualiza, builda, e registra automaticamente
+Roda em [Bun](https://bun.sh) — sem etapa de build, o servidor executa o TypeScript direto
+da fonte. Instale o Bun primeiro se ainda não tiver: `curl -fsSL https://bun.sh/install | bash`.
+
+Instalador de um comando só — clona/atualiza e registra automaticamente
 no Claude Code e/ou Gemini CLI (o que você tiver instalado):
 
 ```bash
@@ -46,20 +49,46 @@ novo atualiza a instalação existente — seguro de repetir.
 ```bash
 git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
 cd sts-tools-mcp-tuxedo-qa
-npm install
-npm run build
+bun install
 ```
 
 Registre como servidor MCP. No Claude Code (escopo `user` = disponível em todos os projetos):
 
 ```bash
-claude mcp add tuxedoqa --scope user -- node "$(pwd)/dist/index.js"
+claude mcp add tuxedoqa --scope user -- bun "$(pwd)/src/index.ts"
 ```
 
 No Gemini CLI (sem `--` antes do comando — sintaxe diferente do Claude Code):
 
 ```bash
-gemini mcp add tuxedoqa node "$(pwd)/dist/index.js" --scope user
+gemini mcp add tuxedoqa bun "$(pwd)/src/index.ts" --scope user
+```
+
+Configuração equivalente em JSON, se seu cliente MCP usar esse formato (Claude Code, Gemini CLI,
+Antigravity, opencode):
+
+```json
+{
+  "mcpServers": {
+    "tuxedoqa": {
+      "command": "bun",
+      "args": ["/caminho/absoluto/para/tuxedo-qa/src/index.ts"]
+    }
+  }
+}
+```
+
+No Cursor e em outras ferramentas que usam a chave `mcp.servers` em vez de `mcpServers`:
+
+```json
+{
+  "mcp.servers": {
+    "tuxedoqa": {
+      "command": "bun",
+      "args": ["/caminho/absoluto/para/tuxedo-qa/src/index.ts"]
+    }
+  }
+}
 ```
 
 </details>
@@ -67,7 +96,7 @@ gemini mcp add tuxedoqa node "$(pwd)/dist/index.js" --scope user
 Opcionalmente, inicie o dashboard local:
 
 ```bash
-npm run dashboard
+bun run dashboard
 # → http://localhost:3131
 ```
 
@@ -79,7 +108,7 @@ ver e gerenciar todos eles juntos. A ideia:
 
 - Cada projeto tem sua própria conexão MCP (o Claude/Gemini "conectado" naquele projeto
   específico só enxerga e mexe nos testes daquele projeto).
-- O dashboard (`npm run dashboard`) não pertence a nenhum projeto — ele enxerga todos ao
+- O dashboard (`bun run dashboard`) não pertence a nenhum projeto — ele enxerga todos ao
   mesmo tempo, com um seletor pra trocar de contexto.
 - O scheduler (monitoramento automático) roda dentro do dashboard e cuida de **todos os
   projetos ao mesmo tempo**, cada um no seu próprio horário.
@@ -116,7 +145,7 @@ Suba o dashboard uma vez só (ele não precisa de `TUXEDO_QA_PROJECT` nenhum —
 sozinho):
 
 ```bash
-npm run dashboard
+bun run dashboard
 # → http://localhost:3131
 ```
 
@@ -140,10 +169,15 @@ funciona no modo padrão (um projeto só, sem namespace), exatamente como antes.
 ## Desenvolvimento
 
 ```bash
-npm run dev         # roda o servidor MCP com tsx (sem build)
-npm run dashboard    # dashboard em modo dev
-npm test             # roda a suíte Playwright diretamente
+bun run start        # roda o servidor MCP (sem build — Bun executa o TS direto)
+bun run dashboard    # dashboard
+bun run typecheck    # tsc --noEmit, só pra conferir tipos
+bun run test         # roda a suíte Playwright diretamente
 ```
+
+⚠️ Sempre `bun run test`, nunca `bun test` sem o `run` — `bun test` sozinho aciona o test
+runner **nativo** do Bun (que colide com o `test()` global do Playwright e quebra); `bun run
+test` executa o script `"test"` do `package.json` (`playwright test`), que é o que você quer.
 
 ## Navegador headless vs. visível
 
@@ -152,9 +186,9 @@ nenhuma na tela. Pra acompanhar visualmente o que o teste está fazendo (útil p
 um fluxo novo), basta passar a flag `PWHEADED=1` antes do comando:
 
 ```bash
-npx playwright test                # headless (padrão)
-PWHEADED=1 npx playwright test     # abre o navegador visível
-PWHEADED=1 npm run dev             # mesma flag funciona rodando via o servidor MCP
+bun run test                # headless (padrão)
+PWHEADED=1 bun run test     # abre o navegador visível
+PWHEADED=1 bun run start    # mesma flag funciona rodando via o servidor MCP
 ```
 
 Isso vale pra qualquer execução — manual, via dashboard, ou disparada pelo Claude/Gemini

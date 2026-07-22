@@ -111,6 +111,7 @@
       <a href="#features">Recursos</a>
       <a href="#use-cases">Casos de uso</a>
       <a href="#tools">Ferramentas MCP</a>
+      <a href="#skills">Skills</a>
       <a href="#quickstart">Como começar</a>
       <a href="#multi-project">Múltiplos projetos</a>
       <a href="https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa">GitHub</a>
@@ -258,35 +259,133 @@
   </div>
 </section>
 
+<section id="skills">
+  <div class="wrap">
+    <h2>Skills</h2>
+    <p class="section-sub">O que são Skills e por que a <code>/tuxedo-qa</code> é uma.</p>
+
+    <h3 style="font-size:17px;margin:0 0 10px">O que são Skills?</h3>
+    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 28px">
+      Skills são pacotes de contexto especializado que descrevem regras de negócio do
+      tuxedo-qa, padrões técnicos oficiais, convenções de teste por tipo de fluxo
+      (login, checkout, WhatsApp, CRM) e boas práticas pra credenciais e 2FA. São consumidas
+      diretamente por IDEs e ferramentas de AI coding como Claude Code — a skill
+      <code>/tuxedo-qa</code> já confere se o MCP está instalado pro projeto atual, oferece
+      pra instalar se não estiver, e escreve/roda/corrige teste seguindo essas convenções sem
+      precisar reexplicar nada a cada conversa.
+    </p>
+
+    <div class="grid" style="margin-bottom:36px">
+      <div class="card">
+        <span class="icon">🎯</span>
+        <h3>Contexto Preciso</h3>
+        <p>Informação atualizada e específica sobre as ferramentas MCP, convenções de teste e o modelo de sandbox/validação do projeto.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📐</span>
+        <h3>Padronização</h3>
+        <p>Testes gerados seguem sempre as mesmas convenções oficiais — helper de credenciais, geração de CPF/CNPJ, `requestInput()` pra 2FA — em vez de reinventar a cada conversa.</p>
+      </div>
+      <div class="card">
+        <span class="icon">⚡</span>
+        <h3>Aceleração</h3>
+        <p>Menos ida-e-volta reexplicando o toolkit, mais regra direta — a skill já sabe as 16 ferramentas e quando usar cada uma.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🤖</span>
+        <h3>IA-friendly</h3>
+        <p>Estrutura pensada pra consumo automático por agentes — auto-aciona pelo contexto do pedido, ou via <code>/tuxedo-qa</code> explícito.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🛡️</span>
+        <h3>Menos Erros</h3>
+        <p>Checklist de pré-voo (identidade de teste, serviços externos reais, credenciais) reduz interpretação errada antes de qualquer teste ser escrito.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:17px;margin:0 0 14px">Filosofia</h3>
+    <div class="usecases">
+      <div class="usecase">
+        <div class="num">1</div>
+        <div><h3>Explícitas</h3><p>Sem regra implícita ou achismo — o checklist de pré-voo e as convenções de teste estão escritos por extenso na skill, não inferidos.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">2</div>
+        <div><h3>Auditáveis</h3><p>Texto claro, versionado no próprio repositório (<code>.claude/skills/tuxedo-qa/SKILL.md</code>) e revisável como qualquer outro arquivo do projeto.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">3</div>
+        <div><h3>Modulares</h3><p>Cada seção da skill resolve um problema específico — setup, convenções de código, checklist por tipo de fluxo, sandbox — sem depender uma da outra.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">4</div>
+        <div><h3>IA-first</h3><p>Escrita pensando em consumo automático por um agente, com gatilhos de invocação (<code>description</code>/<code>when_to_use</code>) explícitos.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">5</div>
+        <div><h3>Human-readable</h3><p>É markdown puro — também dá pra ler direto, sem precisar de um agente pra traduzir.</p></div>
+      </div>
+      <div class="usecase">
+        <div class="num">6</div>
+        <div><h3>Fonte única de verdade</h3><p>Uma skill só, versionada junto do código — evita divergência entre o que o agente sabe e o que o projeto realmente faz.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="quickstart">
   <div class="wrap">
     <h2>Como começar</h2>
-    <p class="section-sub">Roda inteiramente na sua máquina — um servidor MCP local mais um dashboard opcional.</p>
+    <p class="section-sub">Roda inteiramente na sua máquina em <a href="https://bun.sh">Bun</a> — sem etapa de build, o servidor executa o TypeScript direto da fonte. Um servidor MCP local mais um dashboard opcional.</p>
     <div class="steps">
       <div class="step">
         <div class="step-body">
           <h3>Instalar</h3>
-          <p>Um comando só — clona, builda e registra no Claude Code e/ou Gemini CLI automaticamente:</p>
+          <p>Um comando só — clona e registra no Claude Code e/ou Gemini CLI automaticamente (instale o <a href="https://bun.sh">Bun</a> antes, se ainda não tiver: <code>curl -fsSL https://bun.sh/install | bash</code>):</p>
           <pre><code>curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/install.sh | bash</code></pre>
           <p>Instala em <code>~/tuxedo-qa</code> (mude com <code>TUXEDO_QA_DIR=/outro/caminho</code>). Rodar de novo atualiza — seguro de repetir.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Prefere manual?</h3>
+          <h3>Instalação local</h3>
           <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
-cd sts-tools-mcp-tuxedo-qa
-npm install && npm run build</code></pre>
+cd tuxedo-qa
+bun install</code></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <h3>Configuração</h3>
           <p>Claude Code:</p>
-          <pre><code>claude mcp add tuxedoqa --scope user -- node "$(pwd)/dist/index.js"</code></pre>
+          <pre><code>claude mcp add tuxedoqa --scope user -- bun "$(pwd)/src/index.ts"</code></pre>
           <p>Gemini CLI (sem <code>--</code> antes do comando):</p>
-          <pre><code>gemini mcp add tuxedoqa node "$(pwd)/dist/index.js" --scope user</code></pre>
+          <pre><code>gemini mcp add tuxedoqa bun "$(pwd)/src/index.ts" --scope user</code></pre>
+          <p>Gemini CLI / Claude Code / Antigravity / opencode via config JSON:</p>
+          <pre><code>{
+  "mcpServers": {
+    "tuxedoqa": {
+      "command": "bun",
+      "args": ["/caminho/absoluto/para/tuxedo-qa/src/index.ts"]
+    }
+  }
+}</code></pre>
+          <p>Antigravity / Cursor (chave <code>mcp.servers</code>):</p>
+          <pre><code>{
+  "mcp.servers": {
+    "tuxedoqa": {
+      "command": "bun",
+      "args": ["/caminho/absoluto/para/tuxedo-qa/src/index.ts"]
+    }
+  }
+}</code></pre>
+          <p>Lista completa das <a href="#tools">16 ferramentas disponíveis e o que cada uma faz</a> logo abaixo.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
           <h3>(Opcional) iniciar o dashboard local</h3>
-          <pre><code>npm run dashboard
+          <pre><code>bun run dashboard
 # → http://localhost:3131</code></pre>
         </div>
       </div>
@@ -298,15 +397,15 @@ npm install && npm run build</code></pre>
       </div>
       <div class="step">
         <div class="step-body">
-          <h3>Peça ao seu agente de IA pra criar o primeiro teste</h3>
-          <p>"Crie um teste Playwright que faz login no staging e confere se o dashboard carrega" — o Claude ou Gemini chama <code>create_test</code>, salva a spec, e pode rodar na hora com <code>run_tests</code>.</p>
+          <h3>Rode <code>/tuxedo-qa</code> ou descreva o fluxo pro seu agente</h3>
+          <p>"Crie um teste Playwright que faz login no staging e confere se o dashboard carrega" — o Claude ou Gemini chama <code>create_test</code>, salva a spec, e pode rodar na hora com <code>run_tests</code>. No Claude Code, <code>/tuxedo-qa</code> já confere a instalação e conhece as convenções do projeto sozinho.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
           <h3>(Opcional) ver o navegador rodando</h3>
           <p>Por padrão todo teste roda headless (sem janela). Pra acompanhar visualmente o que está acontecendo, passe <code>PWHEADED=1</code> antes do comando — funciona rodando direto, pelo dashboard, ou disparado pelo Claude/Gemini:</p>
-          <pre><code>PWHEADED=1 npx playwright test</code></pre>
+          <pre><code>PWHEADED=1 bun run test</code></pre>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ dist/
 test-results/
 results/
 
-# local, personal permissions — not the agent definitions in .claude/agents/
+# local, personal permissions — not the skill definitions in .claude/skills/
 .claude/settings.local.json
 
 # per-project namespaces (TUXEDO_QA_PROJECT) — each holds its own

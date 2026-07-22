@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# tuxedo-qa installer — clones/updates, builds, and registers the MCP
-# server with whichever AI CLI(s) you have installed (Claude Code, Gemini CLI).
+# tuxedo-qa installer — clones/updates and registers the MCP server with
+# whichever AI CLI(s) you have installed (Claude Code, Gemini CLI). Runs on
+# Bun — no build step, the server runs straight from TypeScript source.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/install.sh | bash
@@ -33,9 +34,11 @@ require() {
   command -v "$1" >/dev/null 2>&1 || { err "\"$1\" não encontrado no PATH. Instale antes de continuar."; exit 1; }
 }
 
+if ! command -v bun >/dev/null 2>&1; then
+  err "\"bun\" não encontrado no PATH. Instale antes de continuar: curl -fsSL https://bun.sh/install | bash"
+  exit 1
+fi
 require git
-require node
-require npm
 
 info "Instalando tuxedo-qa em $INSTALL_DIR"
 
@@ -47,12 +50,10 @@ else
 fi
 
 cd "$INSTALL_DIR"
-info "Instalando dependências (npm install)..."
-npm install
-info "Buildando (npm run build)..."
-npm run build
+info "Instalando dependências (bun install)..."
+bun install
 
-DIST_ENTRY="$INSTALL_DIR/dist/index.js"
+SRC_ENTRY="$INSTALL_DIR/src/index.ts"
 
 # Each CLI has its own `mcp add` syntax (Claude Code wants "--" before the
 # command; Gemini CLI doesn't and uses different scope values), so build the
@@ -61,8 +62,8 @@ add_command_for() {
   local env_args=""
   [ -n "$PROJECT" ] && env_args="-e TUXEDO_QA_PROJECT=$PROJECT"
   case "$1" in
-    claude) echo "claude mcp add $MCP_NAME --scope user $env_args -- node \"$DIST_ENTRY\"" ;;
-    gemini) echo "gemini mcp add $MCP_NAME node \"$DIST_ENTRY\" --scope user $env_args" ;;
+    claude) echo "claude mcp add $MCP_NAME --scope user $env_args -- bun \"$SRC_ENTRY\"" ;;
+    gemini) echo "gemini mcp add $MCP_NAME bun \"$SRC_ENTRY\" --scope user $env_args" ;;
   esac
 }
 
@@ -117,7 +118,7 @@ echo "Próximos passos:"
 echo "  1. Reinicie/reconecte sua CLI de IA pra carregar o servidor MCP novo."
 echo "  2. (Opcional) inicie o dashboard — um só, mesmo com vários projetos registrados,"
 echo "     ele já mostra todos com um seletor pra trocar de contexto:"
-echo "       cd \"$INSTALL_DIR\" && npm run dashboard"
+echo "       cd \"$INSTALL_DIR\" && bun run dashboard"
 echo "  3. Rode /tuxedo-qa no chat (ou só descreva o fluxo) pra criar o primeiro teste."
 if [ -n "$PROJECT" ]; then
   echo "  4. Pra registrar outro projeto depois: TUXEDO_QA_PROJECT=<outro-slug> bash install.sh"

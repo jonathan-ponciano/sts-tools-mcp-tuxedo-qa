@@ -9,7 +9,7 @@ e página pública de status.
 
 ## O que é
 
-O tuxedo-qa expõe 16 ferramentas MCP que cobrem todo o ciclo de vida de uma suíte de testes
+O tuxedo-qa expõe 17 ferramentas MCP que cobrem todo o ciclo de vida de uma suíte de testes
 sintéticos: escrever specs em linguagem natural, rodar sob demanda ou por agendamento,
 autocorrigir falhas, acessar ambientes de staging protegidos por headers, e expor os
 resultados numa página pública de status — tudo conduzido por uma conversa com seu
@@ -23,7 +23,7 @@ na landing page.
 O instalador também registra a skill **`tuxedo-qa`** (globalmente, em `~/.claude/skills/`) —
 rode `/tuxedo-qa` em qualquer projeto (ou só descreva o que quer testar; ela aciona sozinha
 pelo contexto). Ela mesma confere se já existe uma conexão MCP registrada pra esse projeto e
-oferece pra instalar se não tiver, já sabe as 16 ferramentas, as convenções de teste do
+oferece pra instalar se não tiver, já sabe as 17 ferramentas, as convenções de teste do
 projeto (usar o helper de credenciais em vez de senha fixa, `brasil.ts` pra CPF/CNPJ,
 `human-loop.ts` pra 2FA/WhatsApp/SMS) e quando usar `run_until_pass` vs. corrigir manualmente.
 (Só Claude Code por enquanto — o Gemini CLI não tem esse mecanismo de skills ainda.)

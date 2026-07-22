@@ -17,6 +17,7 @@ import { getStatus, getStatusSchema } from './tools/get-status.js';
 import { pauseTests, pauseTestsSchema } from './tools/pause-tests.js';
 import { setWebhook, setWebhookSchema } from './tools/set-webhook.js';
 import { createCredential, createCredentialSchema } from './tools/create-credential.js';
+import { requestCredential, requestCredentialSchema } from './tools/request-credential.js';
 import { listCredentials } from './tools/list-credentials.js';
 import { deleteCredential, deleteCredentialSchema } from './tools/delete-credential.js';
 import { startPairDebug, startPairDebugSchema } from './tools/start-pair-debug.js';
@@ -122,7 +123,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'create_credential',
-      description: 'Create or update a named credential set (e.g. admin, user_comum). Fields are key-value pairs like { email, password, token }.',
+      description:
+        'Create or update a named credential set (e.g. admin, user_comum) with real values you already have in hand ' +
+        '(e.g. the user just pasted them into the chat). Fields are key-value pairs like { email, password, token }. ' +
+        'Prefer request_credential instead whenever you do not already have the actual value in front of you — it never ' +
+        'asks the user to paste a secret into the conversation.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -131,6 +136,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
         required: ['name', 'fields'],
       },
+    },
+    {
+      name: 'request_credential',
+      description:
+        'Ask a human to fill in a credential set directly in the dashboard, without ever passing the actual value through ' +
+        'this conversation. Use this by default when a test needs a credential that does not exist yet — only use ' +
+        'create_credential directly if the user has already given you the real value unprompted.',
+      inputSchema: zodToJsonSchema(requestCredentialSchema),
     },
     {
       name: 'list_credentials',
@@ -242,6 +255,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'create_credential': {
         const input = createCredentialSchema.parse(args);
         result = createCredential(input);
+        break;
+      }
+      case 'request_credential': {
+        const input = requestCredentialSchema.parse(args);
+        result = requestCredential(input);
         break;
       }
       case 'list_credentials': {

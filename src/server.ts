@@ -14,6 +14,7 @@ import { setWebhook } from './tools/set-webhook.js';
 import { readLastRun } from './lib/results-store.js';
 import { getAllMeta, getTestMeta } from './lib/test-metadata.js';
 import { readCredentials, maskValue } from './lib/credentials-store.js';
+import { readCredentialRequests, resolveCredentialRequest } from './lib/credential-requests-store.js';
 import { readProtection, writeProtection } from './lib/protection-store.js';
 import { readStatusPage, writeStatusPage } from './lib/status-page-store.js';
 import { readWebhook } from './lib/webhook-store.js';
@@ -293,10 +294,30 @@ app.post('/api/credentials', async (req, res) => {
   try {
     const { name, fields } = req.body as { name: string; fields: Record<string, string> };
     const result = await createCredential({ name, fields }, projectFrom(req));
+    // Saved for real (browser → server, never through the AI) — if this was
+    // requested via request_credential, that pending request is fulfilled now.
+    resolveCredentialRequest(name, configDirFor(projectFrom(req)));
     res.json({ message: result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
+});
+
+// ── Pending credential requests ─────────────────────────────────────────────────
+// Populated by the request_credential MCP tool — never carries a value, only
+// which fields are needed, so the dashboard can prompt a human to fill them
+// in directly (this endpoint), keeping secrets out of the AI's context.
+app.get('/api/credential-requests', (req, res) => {
+  const requests = readCredentialRequests(configDirFor(projectFrom(req)));
+  res.json({ requests });
+});
+
+// Explicit dismissal (no credential saved) — for a request that's stale or
+// no longer needed, as opposed to resolveCredentialRequest's "fulfilled by
+// actually saving one", which happens automatically in POST /api/credentials.
+app.delete('/api/credential-requests/:name', (req, res) => {
+  resolveCredentialRequest(req.params.name, configDirFor(projectFrom(req)));
+  res.json({ message: `Pedido de credencial "${req.params.name}" dispensado.` });
 });
 
 app.delete('/api/credentials/:name', async (req, res) => {

@@ -149,7 +149,7 @@
 <section id="features">
   <div class="wrap">
     <h2>O que ele faz</h2>
-    <p class="section-sub">Um único servidor MCP, conectado ao Claude, Gemini ou qualquer cliente compatível com MCP, expondo 16 ferramentas que cobrem todo o ciclo de vida de uma suíte de testes sintéticos.</p>
+    <p class="section-sub">Um único servidor MCP, conectado ao Claude, Gemini ou qualquer cliente compatível com MCP, expondo 17 ferramentas que cobrem todo o ciclo de vida de uma suíte de testes sintéticos.</p>
     <div class="grid">
       <div class="card">
         <span class="icon">✍️</span>
@@ -199,7 +199,7 @@
       <div class="card">
         <span class="icon">🤖</span>
         <h3>Skill dedicada — <code>/tuxedo-qa</code></h3>
-        <p>Roda em qualquer projeto no Claude Code, já sabendo instalar, configurar e usar as 16 ferramentas sozinha. Detalhes e download em <a href="#skills">Skills</a>.</p>
+        <p>Roda em qualquer projeto no Claude Code, já sabendo instalar, configurar e usar as 17 ferramentas sozinha. Detalhes e download em <a href="#skills">Skills</a>.</p>
       </div>
     </div>
   </div>
@@ -257,7 +257,8 @@
           <tr><td><code>get_status</code></td><td>Status geral da suíte, ou detalhe de falha e sugestões de correção por teste.</td></tr>
           <tr><td><code>pause_tests</code></td><td>Pausa toda a suíte por até 60 minutos — retoma automaticamente.</td></tr>
           <tr><td><code>set_webhook</code></td><td>Configura a URL do webhook (Discord, Slack, ou JSON genérico) usada nas notificações de execução.</td></tr>
-          <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado (campos chave-valor).</td></tr>
+          <tr><td><code>request_credential</code></td><td>Pede pro humano preencher uma credencial direto no dashboard (só os nomes dos campos, nunca o valor) — o valor real nunca passa pela conversa com a IA.</td></tr>
+          <tr><td><code>create_credential</code></td><td>Cria ou atualiza um conjunto de credenciais nomeado com um valor que a IA já tem em mãos (ex: o usuário colou no chat).</td></tr>
           <tr><td><code>list_credentials</code></td><td>Lista os conjuntos de credenciais salvos com valores mascarados.</td></tr>
           <tr><td><code>delete_credential</code></td><td>Apaga um conjunto de credenciais nomeado.</td></tr>
           <tr><td><code>start_pair_debug</code></td><td>Abre um navegador visível pra você seguir um fluxo manualmente, gravando console, rede, erros e navegações com timestamp.</td></tr>
@@ -313,7 +314,7 @@ curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tux
       <div class="card">
         <span class="icon">⚡</span>
         <h3>Aceleração</h3>
-        <p>Menos ida-e-volta reexplicando o toolkit, mais regra direta — a skill já sabe as 16 ferramentas e quando usar cada uma.</p>
+        <p>Menos ida-e-volta reexplicando o toolkit, mais regra direta — a skill já sabe as 17 ferramentas e quando usar cada uma.</p>
       </div>
       <div class="card">
         <span class="icon">🤖</span>
@@ -410,7 +411,7 @@ bun install</code></pre>
             </details>
           </details>
 
-          <p style="margin-top:14px">Lista completa das <a href="#tools">16 ferramentas disponíveis e o que cada uma faz</a> logo abaixo. Como baixar só a skill <code>/tuxedo-qa</code> sem instalar o servidor: <a href="#skills">seção Skills</a>.</p>
+          <p style="margin-top:14px">Lista completa das <a href="#tools">17 ferramentas disponíveis e o que cada uma faz</a> logo abaixo. Como baixar só a skill <code>/tuxedo-qa</code> sem instalar o servidor: <a href="#skills">seção Skills</a>.</p>
         </div>
       </div>
       <div class="step">

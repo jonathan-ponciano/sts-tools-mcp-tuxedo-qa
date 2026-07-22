@@ -37,7 +37,9 @@ Once tools are confirmed available (from step 1 or 2), continue below.
 - `get_status` — overall or per-test status; for a failing test, includes a `suggestedFixPrompt` telling you what kind of fix to try.
 - `pause_tests` — pauses the whole suite for up to 60 minutes (auto-resumes). Use before a deploy so scheduled runs don't fire false alerts on infra that's mid-rollout.
 - `set_webhook` — Discord, Slack, or generic-JSON webhook URL + `events: "failure"|"all"`. Once set, every *validated* test's run notifies automatically (with a failure screenshot attached for Discord).
-- `create_credential` / `list_credentials` / `delete_credential` — named credential sets (key-value fields, e.g. `{ email, password }`) injected into test runs. **Never** put a real password or token directly in test code.
+- `request_credential` — **prefer this by default** whenever a test needs a credential that doesn't exist yet. It asks for field *names* only (e.g. `["email", "password"]`), never values — the human fills the actual secret straight into the dashboard's Credenciais tab (browser → server directly), so it never enters this conversation. Tell the user to open the dashboard once you've called it; they'll see a pending-request card with a "Preencher" button pre-filled with the right field names.
+- `create_credential` — only use this directly if the user has **already pasted a real value into the chat themselves, unprompted**. Don't ask them to paste a secret so you can call this — that's exactly what `request_credential` avoids.
+- `list_credentials` / `delete_credential` — list (masked) or remove a named credential set.
 - `start_pair_debug` / `get_pair_debug_context` / `stop_pair_debug` — opens a visible browser for a human to drive by hand while console/network/errors/actions get recorded with timestamps; use when the user wants to walk through a flow live and have you spot the bug, or wants a draft test built from what they just did, instead of writing a scripted test upfront.
 
 ## Conventions for the test code you write
@@ -90,7 +92,7 @@ Além do checklist geral acima, alguns tipos de fluxo têm perguntas próprias:
 - Mockado com valor fixo em dev, ou humano real via `requestInput()`? Tem um código de teste fixo reconhecido pelo ambiente?
 
 ### Login / autenticação
-- Credencial já existe (`create_credential`) ou precisa criar uma agora? Qual é o sinal de sucesso mais estável pra checar (URL, elemento específico, texto)?
+- Credencial já existe, ou precisa pedir uma agora (`request_credential` — nunca peça o valor no chat)? Qual é o sinal de sucesso mais estável pra checar (URL, elemento específico, texto)?
 
 ### Checkout / pagamento
 - Ambiente de pagamento é sandbox do gateway (Stripe test mode, PagSeguro sandbox, etc.) ou vai gerar cobrança real? Confirmar antes é inegociável. Usar dados de cartão oficiais de sandbox, nunca inventar um número.

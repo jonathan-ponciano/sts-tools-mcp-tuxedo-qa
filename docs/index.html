@@ -92,6 +92,16 @@
   .step-body h3{margin:0 0 6px; font-size:15px}
   .step-body p{margin:0 0 8px; font-size:13.5px; color:var(--text-dim)}
 
+  /* Collapsible alternatives (manual install, per-client config) — kept out
+     of the numbered steps flow since they're alternatives, not sequence */
+  details{margin-top:10px; border:1px solid var(--border); border-radius:10px; background:var(--bg); padding:2px 14px}
+  details[open]{padding-bottom:12px}
+  details details{margin-left:0; margin-top:8px}
+  summary{cursor:pointer; font-size:13.5px; font-weight:600; padding:10px 0; color:var(--text)}
+  summary:hover{color:var(--accent)}
+  details p{font-size:13.5px; color:var(--text-dim); margin:8px 0}
+  details pre{font-size:12.5px}
+
   footer{padding:40px 0 60px; text-align:center; color:var(--text-dim); font-size:13px; border-top:1px solid var(--border)}
   footer a{color:var(--text-dim); text-decoration:underline}
 
@@ -188,8 +198,8 @@
       </div>
       <div class="card">
         <span class="icon">🤖</span>
-        <h3>Skill dedicada — /tuxedo-qa (Claude Code)</h3>
-        <p>O instalador registra a skill <code>tuxedo-qa</code> globalmente — rode <code>/tuxedo-qa</code> em qualquer projeto (ou descreva o fluxo, ela aciona sozinha). Confere se já tem MCP registrado pro projeto e instala se não tiver, e já sabe as 16 ferramentas e as convenções de teste, sem precisar reexplicar nada a cada conversa.</p>
+        <h3>Skill dedicada — <code>/tuxedo-qa</code></h3>
+        <p>Roda em qualquer projeto no Claude Code, já sabendo instalar, configurar e usar as 16 ferramentas sozinha. Detalhes e download em <a href="#skills">Skills</a>.</p>
       </div>
     </div>
   </div>
@@ -262,7 +272,7 @@
 <section id="skills">
   <div class="wrap">
     <h2>Skills</h2>
-    <p class="section-sub">O que são Skills e por que a <code>/tuxedo-qa</code> é uma.</p>
+    <p class="section-sub">O que são Skills, como baixar/instalar a <code>/tuxedo-qa</code>, e por que ela existe.</p>
 
     <h3 style="font-size:17px;margin:0 0 10px">O que são Skills?</h3>
     <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 28px">
@@ -273,6 +283,20 @@
       <code>/tuxedo-qa</code> já confere se o MCP está instalado pro projeto atual, oferece
       pra instalar se não estiver, e escreve/roda/corrige teste seguindo essas convenções sem
       precisar reexplicar nada a cada conversa.
+    </p>
+
+    <h3 style="font-size:17px;margin:0 0 10px">Download e instalação da skill</h3>
+    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 14px">
+      O instalador completo (<a href="#quickstart">seção abaixo</a>) já cuida disso — copia a
+      skill pra <code>~/.claude/skills/tuxedo-qa/</code> automaticamente. Se quiser só a skill,
+      sem instalar o servidor MCP ainda:
+    </p>
+    <pre style="margin-bottom:28px"><code>mkdir -p ~/.claude/skills/tuxedo-qa
+curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/.claude/skills/tuxedo-qa/SKILL.md \
+  -o ~/.claude/skills/tuxedo-qa/SKILL.md</code></pre>
+    <p style="color:var(--text-dim);font-size:14.5px;max-width:680px;margin:0 0 28px">
+      Reinicie/reconecte o Claude Code e rode <code>/tuxedo-qa</code> — ela mesma detecta que o
+      MCP ainda não está instalado e oferece pra rodar o instalador completo na hora.
     </p>
 
     <div class="grid" style="margin-bottom:36px">
@@ -304,30 +328,30 @@
     </div>
 
     <h3 style="font-size:17px;margin:0 0 14px">Filosofia</h3>
-    <div class="usecases">
-      <div class="usecase">
-        <div class="num">1</div>
-        <div><h3>Explícitas</h3><p>Sem regra implícita ou achismo — o checklist de pré-voo e as convenções de teste estão escritos por extenso na skill, não inferidos.</p></div>
+    <div class="grid">
+      <div class="card">
+        <h3>1. Explícitas</h3>
+        <p>Sem regra implícita ou achismo — o checklist de pré-voo e as convenções de teste estão escritos por extenso na skill, não inferidos.</p>
       </div>
-      <div class="usecase">
-        <div class="num">2</div>
-        <div><h3>Auditáveis</h3><p>Texto claro, versionado no próprio repositório (<code>.claude/skills/tuxedo-qa/SKILL.md</code>) e revisável como qualquer outro arquivo do projeto.</p></div>
+      <div class="card">
+        <h3>2. Auditáveis</h3>
+        <p>Texto claro, versionado no próprio repositório (<code>.claude/skills/tuxedo-qa/SKILL.md</code>) e revisável como qualquer outro arquivo do projeto.</p>
       </div>
-      <div class="usecase">
-        <div class="num">3</div>
-        <div><h3>Modulares</h3><p>Cada seção da skill resolve um problema específico — setup, convenções de código, checklist por tipo de fluxo, sandbox — sem depender uma da outra.</p></div>
+      <div class="card">
+        <h3>3. Modulares</h3>
+        <p>Cada seção da skill resolve um problema específico — setup, convenções de código, checklist por tipo de fluxo, sandbox — sem depender uma da outra.</p>
       </div>
-      <div class="usecase">
-        <div class="num">4</div>
-        <div><h3>IA-first</h3><p>Escrita pensando em consumo automático por um agente, com gatilhos de invocação (<code>description</code>/<code>when_to_use</code>) explícitos.</p></div>
+      <div class="card">
+        <h3>4. IA-first</h3>
+        <p>Escrita pensando em consumo automático por um agente, com gatilhos de invocação (<code>description</code>/<code>when_to_use</code>) explícitos.</p>
       </div>
-      <div class="usecase">
-        <div class="num">5</div>
-        <div><h3>Human-readable</h3><p>É markdown puro — também dá pra ler direto, sem precisar de um agente pra traduzir.</p></div>
+      <div class="card">
+        <h3>5. Human-readable</h3>
+        <p>É markdown puro — também dá pra ler direto, sem precisar de um agente pra traduzir.</p>
       </div>
-      <div class="usecase">
-        <div class="num">6</div>
-        <div><h3>Fonte única de verdade</h3><p>Uma skill só, versionada junto do código — evita divergência entre o que o agente sabe e o que o projeto realmente faz.</p></div>
+      <div class="card">
+        <h3>6. Fonte única de verdade</h3>
+        <p>Uma skill só, versionada junto do código — evita divergência entre o que o agente sabe e o que o projeto realmente faz.</p>
       </div>
     </div>
   </div>
@@ -344,25 +368,27 @@
           <p>Um comando só — clona e registra no Claude Code e/ou Gemini CLI automaticamente (instale o <a href="https://bun.sh">Bun</a> antes, se ainda não tiver: <code>curl -fsSL https://bun.sh/install | bash</code>):</p>
           <pre><code>curl -fsSL https://raw.githubusercontent.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa/main/install.sh | bash</code></pre>
           <p>Instala em <code>~/tuxedo-qa</code> (mude com <code>TUXEDO_QA_DIR=/outro/caminho</code>). Rodar de novo atualiza — seguro de repetir.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <h3>Instalação local</h3>
-          <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
+
+          <details>
+            <summary>Prefere fazer manualmente (sem o instalador)?</summary>
+            <p>Clone e instale as dependências:</p>
+            <pre><code>git clone https://github.com/jonathan-ponciano/sts-tools-mcp-tuxedo-qa.git
 cd tuxedo-qa
 bun install</code></pre>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-body">
-          <h3>Configuração</h3>
-          <p>Claude Code:</p>
-          <pre><code>claude mcp add tuxedoqa --scope user -- bun "$(pwd)/src/index.ts"</code></pre>
-          <p>Gemini CLI (sem <code>--</code> antes do comando):</p>
-          <pre><code>gemini mcp add tuxedoqa bun "$(pwd)/src/index.ts" --scope user</code></pre>
-          <p>Gemini CLI / Claude Code / Antigravity / opencode via config JSON:</p>
-          <pre><code>{
+            <p>Depois registre no seu cliente MCP — escolha o formato abaixo:</p>
+
+            <details>
+              <summary>Claude Code (CLI)</summary>
+              <pre><code>claude mcp add tuxedoqa --scope user -- bun "$(pwd)/src/index.ts"</code></pre>
+            </details>
+            <details>
+              <summary>Gemini CLI</summary>
+              <p>Sem <code>--</code> antes do comando — sintaxe diferente do Claude Code:</p>
+              <pre><code>gemini mcp add tuxedoqa bun "$(pwd)/src/index.ts" --scope user</code></pre>
+            </details>
+            <details>
+              <summary>Config JSON — Gemini CLI / Claude Code / Antigravity / opencode</summary>
+              <pre><code>{
   "mcpServers": {
     "tuxedoqa": {
       "command": "bun",
@@ -370,8 +396,10 @@ bun install</code></pre>
     }
   }
 }</code></pre>
-          <p>Antigravity / Cursor (chave <code>mcp.servers</code>):</p>
-          <pre><code>{
+            </details>
+            <details>
+              <summary>Config JSON — Antigravity / Cursor (chave <code>mcp.servers</code>)</summary>
+              <pre><code>{
   "mcp.servers": {
     "tuxedoqa": {
       "command": "bun",
@@ -379,7 +407,10 @@ bun install</code></pre>
     }
   }
 }</code></pre>
-          <p>Lista completa das <a href="#tools">16 ferramentas disponíveis e o que cada uma faz</a> logo abaixo.</p>
+            </details>
+          </details>
+
+          <p style="margin-top:14px">Lista completa das <a href="#tools">16 ferramentas disponíveis e o que cada uma faz</a> logo abaixo. Como baixar só a skill <code>/tuxedo-qa</code> sem instalar o servidor: <a href="#skills">seção Skills</a>.</p>
         </div>
       </div>
       <div class="step">
@@ -455,7 +486,7 @@ TUXEDO_QA_PROJECT=xtagger bash install.sh</code></pre>
         <div class="step-body">
           <h3>Ver e gerenciar tudo num dashboard só</h3>
           <p>Suba o dashboard uma vez (sem precisar de <code>TUXEDO_QA_PROJECT</code> nenhum):</p>
-          <pre><code>npm run dashboard</code></pre>
+          <pre><code>bun run dashboard</code></pre>
           <p>A aba Monitor mostra todos os projetos juntos (testes, uptime, o que tá rodando agora). Clicar num projeto ali — ou no seletor no topo — troca o contexto do resto do dashboard pra aquele projeto.</p>
         </div>
       </div>
